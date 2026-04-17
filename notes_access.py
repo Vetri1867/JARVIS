@@ -1,5 +1,5 @@
 """
-JARVIS Notes Access — cross-platform notes system.
+SHADOW Notes Access — cross-platform notes system.
 
 macOS: Apple Notes via AppleScript (read + create only).
 Windows/Linux: Local markdown notes in data/notes/ directory.
@@ -17,7 +17,7 @@ from pathlib import Path
 
 from platform_utils import IS_WINDOWS, IS_MACOS, NOTES_DIR
 
-log = logging.getLogger("jarvis.notes")
+log = logging.getLogger("shadow.notes")
 
 
 # ---------------------------------------------------------------------------

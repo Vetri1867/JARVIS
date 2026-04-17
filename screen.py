@@ -1,5 +1,5 @@
 """
-JARVIS Screen Awareness — see what's on the user's screen.
+SHADOW Screen Awareness — see what's on the user's screen.
 
 Two capabilities:
 1. Window/app list (Windows: ctypes Win32 API, macOS: AppleScript)
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from platform_utils import IS_WINDOWS, IS_MACOS
 
-log = logging.getLogger("jarvis.screen")
+log = logging.getLogger("shadow.screen")
 
 
 # ---------------------------------------------------------------------------
@@ -316,7 +316,7 @@ async def describe_screen(llm_client) -> str:
                 ],
                 config={
                     "system_instruction": (
-                        "You are JARVIS analyzing a screenshot of the user's desktop. "
+                        "You are SHADOW analyzing a screenshot of the user's desktop. "
                         "Describe what you see concisely: which apps are open, what the user "
                         "appears to be working on, any notable content visible. "
                         "Be specific about app names, file names, URLs, code, or documents visible. "
@@ -356,7 +356,7 @@ async def describe_screen(llm_client) -> str:
                 contents="Open windows:\n" + "\n".join(context_parts),
                 config={
                     "system_instruction": (
-                        "You are JARVIS. Given the user's open windows and apps, summarize "
+                        "You are SHADOW. Given the user's open windows and apps, summarize "
                         "what they appear to be working on in 1-2 sentences. Natural voice, no markdown."
                     ),
                     "max_output_tokens": 100,

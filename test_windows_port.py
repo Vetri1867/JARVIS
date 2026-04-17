@@ -15,7 +15,7 @@ async def main():
 
     # 3. Notes
     from notes_access import create_apple_note, get_recent_notes, read_note
-    created = await create_apple_note("JARVIS Test Note", "Hello from JARVIS on Windows!")
+    created = await create_apple_note("SHADOW Test Note", "Hello from SHADOW on Windows!")
     print(f"[OK] notes: Created test note = {created}")
     notes = await get_recent_notes()
     print(f"[OK] notes: Found {len(notes)} notes")
@@ -37,7 +37,7 @@ async def main():
     print("[OK] work_mode: imported successfully")
 
     # 8. Browser
-    from browser import JarvisBrowser
+    from browser import ShadowBrowser
     print("[OK] browser: imported successfully")
 
     # 9. Planner

@@ -1,5 +1,5 @@
 """
-JARVIS Success Tracker — Track task success rates and usage patterns.
+SHADOW Success Tracker — Track task success rates and usage patterns.
 
 Stores metrics in SQLite for analysis and learning.
 """
@@ -10,9 +10,9 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-log = logging.getLogger("jarvis.tracking")
+log = logging.getLogger("shadow.tracking")
 
-DB_PATH = Path(__file__).parent / "jarvis_data.db"
+DB_PATH = Path(__file__).parent / "shadow_data.db"
 
 
 class SuccessTracker:

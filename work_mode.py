@@ -1,12 +1,12 @@
 """
-JARVIS Work Mode — persistent claude -p sessions tied to projects.
+SHADOW Work Mode — persistent claude -p sessions tied to projects.
 
-JARVIS can connect to any project directory and maintain a conversation
+SHADOW can connect to any project directory and maintain a conversation
 with Claude Code. Uses --continue to resume the most recent session
 in that directory, so context persists across messages.
 
 The user sees Claude Code working in their Terminal window.
-JARVIS reads the responses via subprocess, summarizes, and reports back.
+SHADOW reads the responses via subprocess, summarizes, and reports back.
 """
 
 import asyncio
@@ -15,7 +15,7 @@ import logging
 import shutil
 from pathlib import Path
 
-log = logging.getLogger("jarvis.work_mode")
+log = logging.getLogger("shadow.work_mode")
 
 SESSION_FILE = Path(__file__).parent / "data" / "active_session.json"
 
@@ -23,7 +23,7 @@ SESSION_FILE = Path(__file__).parent / "data" / "active_session.json"
 class WorkSession:
     """A claude -p session tied to a project directory.
 
-    Each project gets its own session. JARVIS can switch between projects
+    Each project gets its own session. SHADOW can switch between projects
     and --continue picks up where the last message left off.
     """
 
@@ -169,13 +169,13 @@ def is_casual_question(text: str) -> bool:
     casual_patterns = [
         "what time", "what's the time", "what day",
         "what's the weather", "weather",
-        "how are you", "are you there", "hey jarvis",
+        "how are you", "are you there", "hey shadow",
         "good morning", "good evening", "good night",
         "thank you", "thanks", "never mind", "nevermind",
         "stop", "cancel", "quit work mode", "exit work mode",
         "go back to chat", "regular mode",
         "how's it going", "what's up",
-        "are you still there", "you there", "jarvis",
+        "are you still there", "you there", "shadow",
         "are you doing it", "is it working", "what happened",
         "did you hear me", "hello", "hey",
         "how's that coming", "hows that coming",

@@ -1,5 +1,5 @@
 """
-JARVIS Calendar Access — cross-platform calendar integration.
+SHADOW Calendar Access — cross-platform calendar integration.
 
 macOS: Apple Calendar via AppleScript.
 Windows: Outlook COM automation via win32com, or graceful fallback.
@@ -14,7 +14,7 @@ from pathlib import Path
 
 from platform_utils import IS_WINDOWS, IS_MACOS
 
-log = logging.getLogger("jarvis.calendar")
+log = logging.getLogger("shadow.calendar")
 
 _calendar_accounts_env = os.getenv("CALENDAR_ACCOUNTS", "")
 USER_CALENDARS: list[str] = [

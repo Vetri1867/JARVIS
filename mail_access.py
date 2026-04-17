@@ -1,5 +1,5 @@
 """
-JARVIS Mail Access — cross-platform READ-ONLY email access.
+SHADOW Mail Access — cross-platform READ-ONLY email access.
 
 macOS: Apple Mail via AppleScript.
 Windows: IMAP (works with Gmail, Outlook.com, Yahoo, etc.)
@@ -15,7 +15,7 @@ from datetime import datetime
 
 from platform_utils import IS_WINDOWS, IS_MACOS
 
-log = logging.getLogger("jarvis.mail")
+log = logging.getLogger("shadow.mail")
 
 _mail_launched = False
 

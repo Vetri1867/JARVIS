@@ -1,21 +1,21 @@
-# JARVIS
+# SHADOW
 
 **Just A Rather Very Intelligent System.**
 
 A voice-first AI assistant that runs on your Mac. Talk to it, and it talks back -- with a British accent, dry wit, and an audio-reactive particle orb straight out of the MCU.
 
-JARVIS connects to your Apple Calendar, Mail, and Notes. It can browse the web, spawn Claude Code sessions to build entire projects, and plan your day -- all through natural voice conversation.
+SHADOW connects to your Apple Calendar, Mail, and Notes. It can browse the web, spawn Claude Code sessions to build entire projects, and plan your day -- all through natural voice conversation.
 
 > "Will do, sir."
 
 <!-- TODO: Add demo GIF or screenshot here -->
-<!-- ![JARVIS Demo](docs/demo.gif) -->
+<!-- ![SHADOW Demo](docs/demo.gif) -->
 
 ---
 
 ## What It Does
 
-- **Voice conversation** -- speak naturally, get spoken responses with a JARVIS voice
+- **Voice conversation** -- speak naturally, get spoken responses with a SHADOW voice
 - **Builds software** -- say "build me a landing page" and watch Claude Code do the work
 - **Reads your calendar** -- "What's on my schedule today?"
 - **Reads your email** -- "Any unread messages?" (read-only, by design)
@@ -25,7 +25,7 @@ JARVIS connects to your Apple Calendar, Mail, and Notes. It can browse the web, 
 - **Remembers things** -- "I prefer React over Vue" (it remembers next time)
 - **Plans your day** -- combines calendar, tasks, and priorities into a plan
 - **Sees your screen** -- knows what apps are open for context-aware responses
-- **Audio-reactive orb** -- a Three.js particle visualization that pulses with JARVIS's voice
+- **Audio-reactive orb** -- a Three.js particle visualization that pulses with SHADOW's voice
 
 ## Requirements
 
@@ -42,8 +42,8 @@ JARVIS connects to your Apple Calendar, Mail, and Notes. It can browse the web, 
 The fastest way to get running:
 
 ```bash
-git clone https://github.com/yourusername/jarvis.git
-cd jarvis
+git clone https://github.com/yourusername/shadow.git
+cd shadow
 claude
 ```
 
@@ -53,8 +53,8 @@ Claude Code will read the project's `CLAUDE.md` and walk you through setup step 
 
 ```bash
 # 1. Clone the repo
-git clone https://github.com/yourusername/jarvis.git
-cd jarvis
+git clone https://github.com/yourusername/shadow.git
+cd shadow
 
 # 2. Set up environment
 cp .env.example .env
@@ -79,7 +79,7 @@ cd frontend && npm run dev
 open http://localhost:5173
 ```
 
-Click the page once to enable audio, then speak. JARVIS will respond.
+Click the page once to enable audio, then speak. SHADOW will respond.
 
 ## Configuration
 
@@ -90,7 +90,7 @@ Edit your `.env` file:
 ANTHROPIC_API_KEY=your-anthropic-api-key-here
 FISH_API_KEY=your-fish-audio-api-key-here
 
-# Optional -- your name (JARVIS will address you personally)
+# Optional -- your name (SHADOW will address you personally)
 USER_NAME=Tony
 
 # Optional -- specific calendar accounts (comma-separated)
@@ -119,7 +119,7 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 | Communication | WebSocket (JSON messages + binary audio) |
 | AI (fast) | Claude Haiku -- low-latency voice responses |
 | AI (deep) | Claude Opus -- research and complex tasks |
-| TTS | Fish Audio with JARVIS voice model |
+| TTS | Fish Audio with SHADOW voice model |
 | System | AppleScript for all macOS integrations |
 
 ## How the Voice Loop Works
@@ -127,10 +127,10 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 1. You speak into your microphone
 2. Chrome's Web Speech API transcribes your speech in real-time
 3. The transcript is sent to the server via WebSocket
-4. JARVIS detects intent -- conversation, action, or build request
+4. SHADOW detects intent -- conversation, action, or build request
 5. For actions: spawns a Claude Code subprocess or runs AppleScript
 6. Generates a response via Claude Haiku (optimized for speed)
-7. Fish Audio converts the response to speech with the JARVIS voice
+7. Fish Audio converts the response to speech with the SHADOW voice
 8. Audio streams back to the browser via WebSocket
 9. The Three.js orb deforms and pulses in response to the audio
 10. Background tasks notify you proactively when they complete
@@ -155,7 +155,7 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 ## Features in Detail
 
 ### Action System
-JARVIS uses action tags to trigger real system actions:
+SHADOW uses action tags to trigger real system actions:
 - `[ACTION:BUILD]` -- spawns Claude Code to build a project
 - `[ACTION:BROWSE]` -- opens Chrome to a URL or search query
 - `[ACTION:RESEARCH]` -- deep research with Claude Opus, outputs an HTML report
@@ -164,7 +164,7 @@ JARVIS uses action tags to trigger real system actions:
 - `[ACTION:REMEMBER]` -- stores a fact for future context
 
 ### Memory System
-JARVIS remembers things you tell it using SQLite with FTS5 full-text search. Preferences, decisions, and facts persist across sessions.
+SHADOW remembers things you tell it using SQLite with FTS5 full-text search. Preferences, decisions, and facts persist across sessions.
 
 ### Calendar & Mail
 All macOS integrations use AppleScript -- no OAuth flows, no token management. Just native system access. Mail is intentionally read-only for safety.
@@ -191,6 +191,6 @@ Built by [Ethan](https://ethanplus.ai).
 
 Powered by [Anthropic Claude](https://anthropic.com) and [Fish Audio](https://fish.audio).
 
-Inspired by the AI that started it all -- Tony Stark's JARVIS.
+Inspired by the AI that started it all -- Tony Stark's SHADOW.
 
-> **Disclaimer:** This is an independent fan project and is not affiliated with, endorsed by, or connected to Marvel Entertainment, The Walt Disney Company, or any related entities. The JARVIS name and character are property of Marvel Entertainment.
+> **Disclaimer:** This is an independent fan project and is not affiliated with, endorsed by, or connected to Marvel Entertainment, The Walt Disney Company, or any related entities. The SHADOW name and character are property of Marvel Entertainment.

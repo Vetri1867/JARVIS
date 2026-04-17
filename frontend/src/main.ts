@@ -1,5 +1,5 @@
 /**
- * JARVIS — Main entry point.
+ * SHADOW — Main entry point.
  *
  * Wires together the orb visualization, WebSocket communication,
  * speech recognition, and audio playback into a single experience.
@@ -82,7 +82,7 @@ function transition(newState: State) {
 
 const voiceInput = createVoiceInput(
   (text: string) => {
-    // Cancel any current JARVIS response before sending new input
+    // Cancel any current SHADOW response before sending new input
     audioPlayer.stop();
     // User spoke — send transcript
     socket.send({ type: "transcript", text, isFinal: true });
@@ -122,7 +122,7 @@ socket.onMessage((msg) => {
       transition("idle");
     }
     // Log text for debugging
-    if (msg.text) console.log("[JARVIS]", msg.text);
+    if (msg.text) console.log("[SHADOW]", msg.text);
   } else if (type === "status") {
     const state = msg.state as string;
     if (state === "thinking" && currentState !== "thinking") {
@@ -136,7 +136,7 @@ socket.onMessage((msg) => {
     }
   } else if (type === "text") {
     // Text fallback when TTS fails
-    console.log("[JARVIS]", msg.text);
+    console.log("[SHADOW]", msg.text);
   } else if (type === "task_spawned") {
     console.log("[task]", "spawned:", msg.task_id, msg.prompt);
   } else if (type === "task_complete") {
@@ -216,7 +216,7 @@ btnRestart.addEventListener("click", async (e) => {
 btnFixSelf.addEventListener("click", (e) => {
   e.stopPropagation();
   menuDropdown.style.display = "none";
-  // Activate work mode on the WebSocket session (JARVIS becomes Claude Code's voice)
+  // Activate work mode on the WebSocket session (SHADOW becomes Claude Code's voice)
   socket.send({ type: "fix_self" });
   statusEl.textContent = "entering work mode...";
 });

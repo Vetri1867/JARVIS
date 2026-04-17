@@ -1,5 +1,5 @@
 """
-JARVIS Proactive Suggestions — Contextual follow-up suggestions after task completion.
+SHADOW Proactive Suggestions — Contextual follow-up suggestions after task completion.
 
 Generates at most 1 voice-friendly suggestion per completed task based on
 simple heuristics (file checks, not LLM calls).
@@ -12,7 +12,7 @@ from typing import Optional
 
 from qa import QAResult
 
-log = logging.getLogger("jarvis.suggestions")
+log = logging.getLogger("shadow.suggestions")
 
 # Web project indicators
 WEB_INDICATORS = {
@@ -27,7 +27,7 @@ TEST_DIRS = {"test", "tests", "__tests__", "spec", "specs"}
 @dataclass
 class Suggestion:
     """A proactive follow-up suggestion."""
-    text: str  # Voice-friendly suggestion (JARVIS personality)
+    text: str  # Voice-friendly suggestion (SHADOW personality)
     action_type: str  # favicon, tests, readme, related, quality
     action_details: dict  # Details for executing the suggestion
 

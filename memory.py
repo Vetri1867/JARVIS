@@ -1,13 +1,13 @@
 """
-JARVIS Memory & Planning — persistent context, tasks, notes, and smart routing.
+SHADOW Memory & Planning — persistent context, tasks, notes, and smart routing.
 
 Three systems:
-1. Memory — facts, preferences, project context JARVIS learns from conversations
+1. Memory — facts, preferences, project context SHADOW learns from conversations
 2. Tasks — to-do items with priority, due dates, project association
 3. Notes — freeform context tied to projects, people, or topics
 
 Everything stored in SQLite. Relevant memories injected into every LLM call
-so JARVIS gets smarter over time.
+so SHADOW gets smarter over time.
 """
 
 import json
@@ -17,9 +17,9 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 
-log = logging.getLogger("jarvis.memory")
+log = logging.getLogger("shadow.memory")
 
-DB_PATH = Path(__file__).parent / "data" / "jarvis.db"
+DB_PATH = Path(__file__).parent / "data" / "shadow.db"
 
 
 def _get_db() -> sqlite3.Connection:
@@ -90,7 +90,7 @@ def init_db():
 
 
 # ---------------------------------------------------------------------------
-# Memories — facts JARVIS learns
+# Memories — facts SHADOW learns
 # ---------------------------------------------------------------------------
 
 def remember(content: str, mem_type: str = "fact", source: str = "", importance: int = 5) -> int:
@@ -402,7 +402,7 @@ def format_plan_for_voice(tasks: list[dict], events: list[dict]) -> str:
 # Memory extraction — learn from conversations
 # ---------------------------------------------------------------------------
 
-async def extract_memories(user_text: str, jarvis_response: str, llm_client) -> list[str]:
+async def extract_memories(user_text: str, shadow_response: str, llm_client) -> list[str]:
     """After a conversation turn, extract any facts worth remembering.
 
     Uses Gemini to decide if anything in the exchange is worth storing.
@@ -414,7 +414,7 @@ async def extract_memories(user_text: str, jarvis_response: str, llm_client) -> 
     try:
         response = await llm_client.aio.models.generate_content(
             model="gemini-2.5-flash",
-            contents=f"User: {user_text}\nJARVIS: {jarvis_response}",
+            contents=f"User: {user_text}\nSHADOW: {shadow_response}",
             config={
                 "system_instruction": (
                     "Extract facts worth remembering from this conversation. "

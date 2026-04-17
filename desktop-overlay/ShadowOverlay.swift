@@ -33,7 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         webView = WKWebView(frame: frame, configuration: config)
         webView.setValue(false, forKey: "drawsBackground")  // Transparent background
 
-        // Load the JARVIS orb — connect to localhost server
+        // Load the SHADOW orb — connect to localhost server
         // Using a custom HTML that only renders the orb (no UI controls)
         let html = buildOrbHTML()
         webView.loadHTMLString(html, baseURL: nil)
@@ -41,7 +41,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         window.contentView = webView
         window.orderFront(nil)
 
-        print("JARVIS desktop overlay running")
+        print("SHADOW desktop overlay running")
     }
 
     func buildOrbHTML() -> String {
@@ -140,7 +140,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         let transE = 0, lastState = 'idle';
         let cloudZ = 0, cloudZVel = 0;
 
-        // Connect to JARVIS WebSocket for state sync
+        // Connect to SHADOW WebSocket for state sync
         function connectWS() {
             try {
                 const ws = new WebSocket('wss://localhost:8340/ws/voice');

@@ -1,5 +1,5 @@
 """
-JARVIS Platform Utilities — cross-platform abstraction layer.
+SHADOW Platform Utilities — cross-platform abstraction layer.
 
 Detects the current OS and provides platform-appropriate constants,
 paths, and helper functions so the rest of the codebase can work
@@ -30,7 +30,7 @@ PROJECT_DIR = Path(__file__).parent
 # Default project directory — ~/Desktop on both platforms
 PROJECTS_DIR = DESKTOP_PATH
 
-# Data directory for JARVIS internal storage
+# Data directory for SHADOW internal storage
 DATA_DIR = PROJECT_DIR / "data"
 DATA_DIR.mkdir(parents=True, exist_ok=True)
 

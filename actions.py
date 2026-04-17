@@ -1,5 +1,5 @@
 """
-JARVIS Action Executor — system actions (cross-platform).
+SHADOW Action Executor — system actions (cross-platform).
 
 macOS: AppleScript-based actions.
 Windows: subprocess + webbrowser + ctypes.
@@ -20,7 +20,7 @@ from urllib.parse import quote
 
 from platform_utils import IS_WINDOWS, IS_MACOS, DESKTOP_PATH
 
-log = logging.getLogger("jarvis.actions")
+log = logging.getLogger("shadow.actions")
 
 
 # ---------------------------------------------------------------------------
@@ -76,7 +76,7 @@ async def open_terminal(command: str = "") -> dict:
         if not success:
             log.error(f"open_terminal failed: {stderr.decode()}")
         else:
-            await _mark_terminal_as_jarvis()
+            await _mark_terminal_as_shadow()
         return {
             "success": success,
             "confirmation": "Terminal is open, sir." if success else "I had trouble opening Terminal, sir.",
@@ -186,7 +186,7 @@ async def open_claude_in_project(project_dir: str, prompt: str) -> dict:
         if not success:
             log.error(f"open_claude_in_project failed: {stderr.decode()}")
         else:
-            await _mark_terminal_as_jarvis()
+            await _mark_terminal_as_shadow()
         return {
             "success": success,
             "confirmation": "Claude Code is running in Terminal, sir. You can watch the progress."
@@ -297,7 +297,7 @@ return "OK"
             if not success:
                 log.error(f"prompt_existing_terminal failed: {stderr.decode()[:200]}")
             if success:
-                await _mark_terminal_as_jarvis()
+                await _mark_terminal_as_shadow()
 
             return {
                 "success": success,
@@ -352,7 +352,7 @@ async def monitor_build(project_dir: str, ws=None, synthesize_fn=None) -> None:
     """Monitor a Claude Code build for completion. Notify via WebSocket when done."""
     import base64
 
-    output_file = Path(project_dir) / ".jarvis_output.txt"
+    output_file = Path(project_dir) / ".shadow_output.txt"
     start = time.time()
     timeout = 600  # 10 minutes
 
@@ -360,7 +360,7 @@ async def monitor_build(project_dir: str, ws=None, synthesize_fn=None) -> None:
         await asyncio.sleep(5)
         if output_file.exists():
             content = output_file.read_text()
-            if "--- JARVIS TASK COMPLETE ---" in content:
+            if "--- SHADOW TASK COMPLETE ---" in content:
                 log.info(f"Build complete in {project_dir}")
                 if ws and synthesize_fn:
                     try:
@@ -449,14 +449,14 @@ def _generate_project_name(prompt: str) -> str:
             "on", "desktop", "that", "application", "app", "full", "stack", "simple",
             "web", "page", "site", "named"}
     meaningful = [w for w in words if w not in skip and len(w) > 2][:4]
-    return "-".join(meaningful) if meaningful else "jarvis-project"
+    return "-".join(meaningful) if meaningful else "shadow-project"
 
 
 # ---------------------------------------------------------------------------
 # macOS-only Helpers
 # ---------------------------------------------------------------------------
 
-async def _mark_terminal_as_jarvis(revert_after: float = 5.0):
+async def _mark_terminal_as_shadow(revert_after: float = 5.0):
     """Temporarily set the front Terminal window to Ocean theme, then revert.
 
     macOS only — no-op on Windows.

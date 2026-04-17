@@ -1,5 +1,5 @@
 /**
- * Voice input (Web Speech API) and audio output (AudioContext) for JARVIS.
+ * Voice input (Web Speech API) and audio output (AudioContext) for SHADOW.
  */
 
 // ---------------------------------------------------------------------------
@@ -34,12 +34,39 @@ export function createVoiceInput(
 
   let shouldListen = false;
   let paused = false;
+  let isAwake = false;
+  let awakeTimeout: any = null;
 
   recognition.onresult = (event: any) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
-        const text = event.results[i][0].transcript.trim();
-        if (text) onTranscript(text);
+        let text = event.results[i][0].transcript.trim();
+        if (!text) continue;
+
+        // Wake Word Detection: "SHADOW" (highly forgiving)
+        const wakeWordRegex = /shadow/i;
+        if (wakeWordRegex.test(text)) {
+          isAwake = true;
+          // Remove the wake word from the command
+          text = text.replace(wakeWordRegex, "").trim();
+          
+          // Stay awake for 15 seconds
+          if (awakeTimeout) clearTimeout(awakeTimeout);
+          awakeTimeout = setTimeout(() => { isAwake = false; }, 15000);
+
+          // If they just said "SHADOW ARISE" with no command, trigger a greeting
+          if (!text) text = "Yes?";
+        }
+
+        // Only send transcript if the system is awake
+        if (isAwake) {
+           // Keep it awake for another 15s after each command
+           if (awakeTimeout) clearTimeout(awakeTimeout);
+           awakeTimeout = setTimeout(() => { isAwake = false; }, 15000);
+           onTranscript(text);
+        } else {
+           console.log("[SHADOW SLEEPING] Ignored:", text);
+        }
       }
     }
   };

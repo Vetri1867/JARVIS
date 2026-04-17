@@ -35,7 +35,7 @@ html, body {
   z-index: 10;
 }
 
-#jarvis-label {
+#shadow-label {
   position: fixed;
   bottom: 16px;
   left: 50%;

@@ -1,5 +1,5 @@
 """
-JARVIS Task Planner — Conversational planning before spawning Claude Code.
+SHADOW Task Planner — Conversational planning before spawning Claude Code.
 
 Handles:
 1. Planning mode detection (distinguish "build me X" from "what time is it")
@@ -18,7 +18,7 @@ from typing import Optional
 
 from templates import TEMPLATES, get_template
 
-log = logging.getLogger("jarvis.planner")
+log = logging.getLogger("shadow.planner")
 
 from platform_utils import DESKTOP_PATH
 
