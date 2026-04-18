@@ -32,14 +32,14 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-from google import genai
+# from google import genai
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from actions import execute_action, monitor_build, open_terminal, open_browser, open_claude_in_project, _generate_project_name, prompt_existing_terminal
+from actions import execute_action, monitor_build, open_terminal, open_browser, _generate_project_name, prompt_existing_terminal
 from work_mode import WorkSession, is_casual_question
 from screen import get_active_windows, take_screenshot, describe_screen, format_windows_for_context
 from calendar_access import get_todays_events, get_upcoming_events, get_next_event, format_events_for_context, format_schedule_summary, refresh_cache as refresh_calendar_cache
@@ -60,8 +60,68 @@ log = logging.getLogger("shadow")
 # Config
 # ---------------------------------------------------------------------------
 
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+from openai import AsyncOpenAI
+import os
+
+class _Models:
+    def __init__(self, client):
+        self.client = client
+    
+    async def generate_content(self, model, contents, config=None):
+        messages = []
+        if config and "system_instruction" in config:
+            # Handle dictionary case or direct string
+            sys_prompt = config["system_instruction"]
+            if isinstance(sys_prompt, dict) and "parts" in sys_prompt:
+                sys_prompt = sys_prompt["parts"][0]["text"]
+            messages.append({"role": "system", "content": sys_prompt})
+        
+        # Add user message
+        if isinstance(contents, list):
+            # Complex multipart
+            text_content = ""
+            for part in contents:
+                if hasattr(part, "text"):
+                    text_content += part.text
+                elif isinstance(part, dict) and "text" in part:
+                    text_content += part["text"]
+                else:
+                    text_content += str(part)
+            messages.append({"role": "user", "content": text_content})
+        else:
+            messages.append({"role": "user", "content": str(contents)})
+            
+        max_tokens = config.get("max_output_tokens") if config else None
+        
+        try:
+            resp = await self.client.chat.completions.create(
+                model="gpt-4o",
+                messages=messages,
+                max_tokens=max_tokens
+            )
+        except Exception as e:
+            print(f"OpenAI API Error: {e}")
+            class ErrorResp:
+                text = f"API Error: {e}"
+            return ErrorResp()
+            
+        class ResponseStub:
+            def __init__(self, text):
+                self.text = text
+                
+        return ResponseStub(resp.choices[0].message.content)
+
+class _Aio:
+    def __init__(self, client):
+        self.models = _Models(client)
+
+class OpenAIGenAIWrapper:
+    def __init__(self, api_key):
+        self._openai = AsyncOpenAI(api_key=api_key)
+        self.aio = _Aio(self._openai)
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
+gemini_client = OpenAIGenAIWrapper(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 
 FISH_API_KEY = os.getenv("FISH_API_KEY", "")
 FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # SHADOW (MCU)
@@ -397,7 +457,7 @@ class AiderTaskManager:
         if IS_WINDOWS:
             # Windows: spawn aider in a new cmd window
             import subprocess as _sp
-            cmd = f'start cmd /k "cd /d {work_dir} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.md > .shadow_output.txt 2>&1 && echo --- SHADOW TASK COMPLETE --- >> .shadow_output.txt"'
+            cmd = f'start cmd /k "cd /d {work_dir} && aider --model openai/gpt-4o --message-file .shadow_prompt.md > .shadow_output.txt 2>&1 && echo --- SHADOW TASK COMPLETE --- >> .shadow_output.txt"'
             process = _sp.Popen(cmd, shell=True)
             task.pid = process.pid
         else:
@@ -405,7 +465,7 @@ class AiderTaskManager:
             applescript = f'''
             tell application "Terminal"
                 activate
-                set newTab to do script "cd {work_dir} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.md | tee .shadow_output.txt; echo '\\n--- SHADOW TASK COMPLETE ---'"
+                set newTab to do script "cd {work_dir} && aider --model openai/gpt-4o --message-file .shadow_prompt.md | tee .shadow_output.txt; echo '\\n--- SHADOW TASK COMPLETE ---'"
             end tell
             '''
             process = await asyncio.create_subprocess_exec(
@@ -802,7 +862,7 @@ async def _execute_research(target: str, ws=None):
         aider_path = shutil.which("aider") or "aider"
 
         process = await asyncio.create_subprocess_exec(
-            aider_path, "--model", "gemini/gemini-2.5-flash", "--message-file", ".shadow_prompt.md",
+            aider_path, "--model", "openai/gpt-4o", "--message-file", ".shadow_prompt.md",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -1586,13 +1646,13 @@ async def handle_build(target: str) -> str:
     script_or_cmd = None
     if IS_WINDOWS:
         import subprocess as _sp
-        cmd = f'start cmd /k "cd /d {path} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.txt"'
+        cmd = f'start cmd /k "cd /d {path} && aider --model openai/gpt-4o --message-file .shadow_prompt.txt"'
         _sp.Popen(cmd, shell=True)
     else:
         script = (
             'tell application "Terminal"\n'
             "    activate\n"
-            f'    do script "cd {path} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.txt"\n'
+            f'    do script "cd {path} && aider --model openai/gpt-4o --message-file .shadow_prompt.txt"\n'
             "end tell"
         )
         await asyncio.create_subprocess_exec(
@@ -2590,13 +2650,13 @@ async def api_fix_self():
     shadow_dir = str(Path(__file__).parent)
     if IS_WINDOWS:
         import subprocess as _sp
-        cmd = f'start cmd /k "cd /d {shadow_dir} && aider --model gemini/gemini-2.5-flash"'
+        cmd = f'start cmd /k "cd /d {shadow_dir} && aider --model openai/gpt-4o"'
         _sp.Popen(cmd, shell=True)
     else:
         script = (
             'tell application "Terminal"\n'
             '    activate\n'
-            f'    do script "cd {shadow_dir} && aider --model gemini/gemini-2.5-flash"\n'
+            f'    do script "cd {shadow_dir} && aider --model openai/gpt-4o"\n'
             'end tell'
         )
         await asyncio.create_subprocess_exec(

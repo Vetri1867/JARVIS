@@ -235,6 +235,33 @@ btnSettings.addEventListener("click", (e) => {
   openSettings();
 });
 
+// Chat Input logic
+const chatInput = document.getElementById("chat-input") as HTMLInputElement;
+const btnSendChat = document.getElementById("btn-send-chat")!;
+
+function handleChatSubmit() {
+  const text = chatInput.value.trim();
+  if (!text) return;
+  
+  // Cancel any current SHADOW response
+  audioPlayer.stop();
+  
+  // Send to backend
+  socket.send({ type: "transcript", text, isFinal: true });
+  
+  // Clear input and update UI state
+  chatInput.value = "";
+  transition("thinking");
+}
+
+btnSendChat.addEventListener("click", handleChatSubmit);
+chatInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
+    handleChatSubmit();
+  }
+});
+
 // First-time setup detection — check after a short delay for server readiness
 setTimeout(() => {
   checkFirstTimeSetup();

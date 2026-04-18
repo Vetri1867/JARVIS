@@ -66,7 +66,7 @@ class WorkSession:
 
         cmd = [
             aider_path,
-            "--model", "gemini/gemini-2.5-flash",
+            "--model", "openai/gpt-4o",
             "--no-auto-commits",
             "--yes-always",
         ]
