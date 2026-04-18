@@ -7,6 +7,30 @@
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
+    <div id="hud-overlay">
+      <div class="hud-ring ring-outer"></div>
+      <div class="hud-ring ring-middle"></div>
+      <div class="hud-ring ring-inner"></div>
+      
+      <div id="hud-left" class="hud-panel">
+        <div class="panel-header">SYSTEM_CORE</div>
+        <div id="system-stats">
+          <div class="stat-row">CPU: <span id="cpu-load">00%</span></div>
+          <div class="stat-row">MEM: <span id="mem-usage">00%</span></div>
+          <div class="stat-row">NET: <span id="net-status">ONLINE</span></div>
+        </div>
+        <div class="panel-header" style="margin-top: 20px;">MEMORY_LOG</div>
+        <div id="memory-feed"></div>
+      </div>
+
+      <div id="hud-right" class="hud-panel">
+        <div class="panel-header">ACTIVE_TASKS</div>
+        <div id="tasks-feed"></div>
+        <div class="panel-header" style="margin-top: 20px;">CALENDAR</div>
+        <div id="calendar-feed"></div>
+      </div>
+    </div>
+
     <canvas id="orb-canvas"></canvas>
 
     <!-- Minimal controls — top right -->

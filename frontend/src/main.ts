@@ -21,6 +21,28 @@ let isMuted = false;
 
 const statusEl = document.getElementById("status-text")!;
 const errorEl = document.getElementById("error-text")!;
+const memoryFeed = document.getElementById("memory-feed")!;
+const tasksFeed = document.getElementById("tasks-feed")!;
+const calendarFeed = document.getElementById("calendar-feed")!;
+
+function updateFeed(el: HTMLElement, text: string) {
+  const div = document.createElement("div");
+  div.style.marginBottom = "8px";
+  div.style.borderLeft = "1px solid rgba(0, 212, 255, 0.3)";
+  div.style.paddingLeft = "8px";
+  div.textContent = `> ${text}`;
+  el.prepend(div);
+  if (el.children.length > 5) el.lastChild?.remove();
+}
+
+function updateSystemStats() {
+  const cpu = Math.floor(Math.random() * 20) + 5;
+  const mem = Math.floor(Math.random() * 30) + 40;
+  document.getElementById("cpu-load")!.textContent = `${cpu}%`;
+  document.getElementById("mem-usage")!.textContent = `${mem}%`;
+}
+setInterval(updateSystemStats, 3000);
+updateSystemStats();
 
 function showError(msg: string) {
   errorEl.textContent = msg;
@@ -128,7 +150,10 @@ socket.onMessage((msg) => {
       transition("idle");
     }
     // Log text for debugging
-    if (msg.text) console.log("[SHADOW]", msg.text);
+    if (msg.text) {
+      console.log("[SHADOW]", msg.text);
+      updateFeed(memoryFeed, msg.text as string);
+    }
   } else if (type === "status") {
     const state = msg.state as string;
     if (state === "thinking" && currentState !== "thinking") {
@@ -143,10 +168,13 @@ socket.onMessage((msg) => {
   } else if (type === "text") {
     // Text fallback when TTS fails
     console.log("[SHADOW]", msg.text);
+    updateFeed(memoryFeed, msg.text as string);
   } else if (type === "task_spawned") {
     console.log("[task]", "spawned:", msg.task_id, msg.prompt);
+    updateFeed(tasksFeed, `NEW: ${msg.prompt}`);
   } else if (type === "task_complete") {
     console.log("[task]", "complete:", msg.task_id, msg.status, msg.summary);
+    updateFeed(tasksFeed, `DONE: ${msg.summary}`);
   }
 });
 
