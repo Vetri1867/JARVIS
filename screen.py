@@ -3,7 +3,7 @@ SHADOW Screen Awareness — see what's on the user's screen.
 
 Two capabilities:
 1. Window/app list (Windows: ctypes Win32 API, macOS: AppleScript)
-2. Screenshot → Claude vision API (Windows: mss, macOS: screencapture)
+2. Screenshot → Gemini vision API (Windows: mss, macOS: screencapture)
 """
 
 import asyncio

@@ -1,5 +1,5 @@
 """
-SHADOW Task Planner — Conversational planning before spawning Claude Code.
+SHADOW Task Planner — Conversational planning before spawning Aider.
 
 Handles:
 1. Planning mode detection (distinguish "build me X" from "what time is it")
@@ -71,7 +71,7 @@ async def detect_planning_mode(
 
     Args:
         user_text: The raw user request.
-        client: Anthropic async client for Haiku classification.
+        client: Gemini async client for classification.
         force_bypass: If True, skip planning and apply smart defaults.
 
     Returns:
@@ -182,7 +182,7 @@ async def _classify_planning_mode_llm(
 
 
 def _classify_planning_mode_heuristic(text: str) -> PlanningDecision:
-    """Fallback heuristic when Haiku is unavailable."""
+    """Fallback heuristic when Gemini is unavailable."""
     task_type = _quick_classify(text)
 
     # Short requests almost always need planning
@@ -324,7 +324,7 @@ async def gather_project_context(project_path: str) -> dict:
         "path": project_path,
         "name": path.name,
         "files": [],
-        "claude_md": None,
+        "aider_md": None,
         "package_json": None,
         "requirements_txt": None,
         "readme": None,
@@ -347,7 +347,7 @@ async def gather_project_context(project_path: str) -> dict:
 
     # Key config files
     for filename, key in [
-        ("CLAUDE.md", "claude_md"),
+        ("AIDER.md", "aider_md"),
         ("package.json", "package_json"),
         ("requirements.txt", "requirements_txt"),
         ("README.md", "readme"),
@@ -386,7 +386,7 @@ async def gather_project_context(project_path: str) -> dict:
 # ---------------------------------------------------------------------------
 
 class TaskPlanner:
-    """Manages the planning conversation before spawning Claude Code."""
+    """Manages the planning conversation before spawning Aider."""
 
     def __init__(self):
         self.active_plan: Optional[Plan] = None
@@ -411,7 +411,7 @@ class TaskPlanner:
             "needs_questions": bool,
         }
         """
-        # Classify the request with Haiku
+        # Classify the request with Gemini
         classification = await self._classify_request(user_request, client)
         task_type = classification.get("task_type", "build")
         detected_project = classification.get("project", "")
@@ -616,7 +616,7 @@ class TaskPlanner:
         return summary
 
     async def build_prompt(self) -> str:
-        """Build the structured claude -p prompt from the finalized plan."""
+        """Build the structured aider prompt from the finalized plan."""
         plan = self.active_plan
         if not plan:
             return ""
@@ -745,8 +745,8 @@ class TaskPlanner:
 
         sections = []
 
-        if context.get("claude_md"):
-            sections.append(f"## Project Instructions (CLAUDE.md)\n{context['claude_md']}")
+        if context.get("aider_md"):
+            sections.append(f"## Project Instructions (AIDER.md)\n{context['aider_md']}")
 
         if context.get("package_json"):
             sections.append(f"## package.json\n```json\n{context['package_json']}\n```")

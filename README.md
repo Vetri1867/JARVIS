@@ -33,21 +33,21 @@ SHADOW connects to your Apple Calendar, Mail, and Notes. It can browse the web, 
 - **Python 3.11+**
 - **Node.js 18+**
 - **Google Chrome** (required for Web Speech API)
-- **Anthropic API key** -- powers the AI brain ([get one here](https://console.anthropic.com/))
+- **Gemini API key** -- powers the AI brain ([get one here](https://aistudio.google.com/))
 - **Fish Audio API key** -- powers the voice ([get one here](https://fish.audio/))
-- **Claude Code CLI** -- for spawning dev tasks ([install here](https://docs.anthropic.com/en/docs/claude-code))
+- **Aider CLI** -- for spawning dev tasks ([install here](https://aider.chat/))
 
-## Quick Start (with Claude Code)
+## Quick Start
 
 The fastest way to get running:
 
 ```bash
 git clone https://github.com/yourusername/shadow.git
 cd shadow
-claude
+aider
 ```
 
-Claude Code will read the project's `CLAUDE.md` and walk you through setup step by step -- API keys, dependencies, SSL certs, everything.
+Aider will read the project files and walk you through setup.
 
 ## Manual Setup
 
@@ -87,7 +87,7 @@ Edit your `.env` file:
 
 ```env
 # Required
-ANTHROPIC_API_KEY=your-anthropic-api-key-here
+GEMINI_API_KEY=your-gemini-api-key-here
 FISH_API_KEY=your-fish-audio-api-key-here
 
 # Optional -- your name (SHADOW will address you personally)
@@ -101,10 +101,10 @@ CALENDAR_ACCOUNTS=you@gmail.com,work@company.com
 ## Architecture
 
 ```
-Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish Audio TTS -> WebSocket -> Speaker
+Microphone -> Web Speech API -> WebSocket -> FastAPI -> Gemini -> Fish Audio TTS -> WebSocket -> Speaker
                                                 |
                                                 v
-                                        Claude Code Tasks
+                                        Aider Tasks
                                         (spawns real dev work)
                                                 |
                                                 v
@@ -117,8 +117,8 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 | Backend | FastAPI + Python (`server.py`, ~2300 lines) |
 | Frontend | Vite + TypeScript + Three.js |
 | Communication | WebSocket (JSON messages + binary audio) |
-| AI (fast) | Claude Haiku -- low-latency voice responses |
-| AI (deep) | Claude Opus -- research and complex tasks |
+| AI (fast) | Gemini 2.5 Flash -- low-latency voice responses |
+| AI (deep) | Gemini 2.5 Pro -- research and complex tasks |
 | TTS | Fish Audio with SHADOW voice model |
 | System | AppleScript for all macOS integrations |
 
@@ -128,8 +128,8 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 2. Chrome's Web Speech API transcribes your speech in real-time
 3. The transcript is sent to the server via WebSocket
 4. SHADOW detects intent -- conversation, action, or build request
-5. For actions: spawns a Claude Code subprocess or runs AppleScript
-6. Generates a response via Claude Haiku (optimized for speed)
+5. For actions: spawns an Aider subprocess or runs AppleScript
+6. Generates a response via Gemini Flash (optimized for speed)
 7. Fish Audio converts the response to speech with the SHADOW voice
 8. Audio streams back to the browser via WebSocket
 9. The Three.js orb deforms and pulses in response to the audio
@@ -147,19 +147,19 @@ Microphone -> Web Speech API -> WebSocket -> FastAPI -> Claude (Haiku) -> Fish A
 | `calendar_access.py` | Apple Calendar integration via AppleScript |
 | `mail_access.py` | Apple Mail integration (read-only) |
 | `notes_access.py` | Apple Notes integration |
-| `actions.py` | System actions (Terminal, Chrome, Claude Code) |
+| `actions.py` | System actions (Terminal, Chrome, Aider) |
 | `browser.py` | Playwright web automation |
-| `work_mode.py` | Persistent Claude Code sessions |
+| `work_mode.py` | Persistent Aider sessions |
 | `planner.py` | Multi-step task planning with smart questions |
 
 ## Features in Detail
 
 ### Action System
 SHADOW uses action tags to trigger real system actions:
-- `[ACTION:BUILD]` -- spawns Claude Code to build a project
+- `[ACTION:BUILD]` -- spawns Aider to build a project
 - `[ACTION:BROWSE]` -- opens Chrome to a URL or search query
-- `[ACTION:RESEARCH]` -- deep research with Claude Opus, outputs an HTML report
-- `[ACTION:PROMPT_PROJECT]` -- connects to an existing project via Claude Code
+- `[ACTION:RESEARCH]` -- deep research with Gemini Pro, outputs an HTML report
+- `[ACTION:PROMPT_PROJECT]` -- connects to an existing project via Aider
 - `[ACTION:ADD_TASK]` -- creates a tracked task with priority and due date
 - `[ACTION:REMEMBER]` -- stores a fact for future context
 
@@ -175,7 +175,7 @@ Contributions are welcome. Some areas that could use work:
 
 - **Linux/Windows support** -- replace AppleScript with cross-platform alternatives
 - **Alternative TTS engines** -- add ElevenLabs, OpenAI TTS, or local models
-- **Alternative LLMs** -- add OpenAI, Gemini, or local model support
+- **Alternative LLMs** -- add Anthropic, OpenAI, or local model support
 - **Mobile client** -- a companion app for voice interaction on the go
 - **Plugin system** -- make it easy to add new actions and integrations
 

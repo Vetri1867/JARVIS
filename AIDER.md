@@ -1,12 +1,12 @@
 # SHADOW — Voice AI Assistant
 
 ## Overview
-SHADOW (Just A Rather Very Intelligent System) is a voice-first AI assistant for macOS. It runs locally on your machine, connecting to your Apple Calendar, Mail, Notes, and can spawn Claude Code sessions for development tasks.
+SHADOW (Just A Rather Very Intelligent System) is a voice-first AI assistant for macOS. It runs locally on your machine, connecting to your Apple Calendar, Mail, Notes, and can spawn Aider sessions for development tasks.
 
 ## Quick Start
-When a user clones this repo and starts Claude Code, help them:
+When a user clones this repo and starts Aider, help them:
 1. Copy .env.example to .env
-2. Get an Anthropic API key from console.anthropic.com
+2. Get a Gemini API key from aistudio.google.com
 3. Get a Fish Audio API key from fish.audio
 4. Install Python dependencies: pip install -r requirements.txt
 5. Install frontend dependencies: cd frontend && npm install
@@ -20,7 +20,7 @@ When a user clones this repo and starts Claude Code, help them:
 - **Backend**: FastAPI + Python (server.py, ~2300 lines)
 - **Frontend**: Vite + TypeScript + Three.js (audio-reactive orb)
 - **Communication**: WebSocket (JSON messages + binary audio)
-- **AI**: Claude Haiku for fast responses, Claude Opus for research
+- **AI**: Gemini 2.5 Flash for fast responses, Gemini 2.5 Pro for research
 - **TTS**: Fish Audio with SHADOW voice model
 - **System**: AppleScript for Calendar, Mail, Notes, Terminal integration
 
@@ -33,12 +33,12 @@ When a user clones this repo and starts Claude Code, help them:
 - `calendar_access.py` — Apple Calendar integration via AppleScript
 - `mail_access.py` — Apple Mail integration (READ-ONLY)
 - `notes_access.py` — Apple Notes integration
-- `actions.py` — System actions (Terminal, Chrome, Claude Code)
+- `actions.py` — System actions (Terminal, Chrome, Aider)
 - `browser.py` — Playwright web automation
-- `work_mode.py` — Persistent Claude Code sessions
+- `work_mode.py` — Persistent Aider sessions
 
 ## Environment Variables
-- `ANTHROPIC_API_KEY` (required) — Claude API access
+- `GEMINI_API_KEY` (required) — Gemini API access
 - `FISH_API_KEY` (required) — Fish Audio TTS
 - `FISH_VOICE_ID` (optional) — Voice model ID
 - `USER_NAME` (optional) — Your name for SHADOW to use

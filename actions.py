@@ -143,37 +143,37 @@ async def open_chrome(url: str) -> dict:
     return await open_browser(url, "chrome")
 
 
-async def open_claude_in_project(project_dir: str, prompt: str) -> dict:
-    """Open a terminal, cd to project dir, run Claude Code interactively.
+async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
+    """Open a terminal, cd to project dir, run Aider interactively.
 
-    Writes the prompt to CLAUDE.md (which claude reads automatically on startup)
-    then launches claude in interactive mode with --dangerously-skip-permissions.
+    Writes the prompt to AIDER.md
+    then launches aider.
     """
-    # Write prompt to CLAUDE.md — claude reads this automatically
-    claude_md = Path(project_dir) / "CLAUDE.md"
-    claude_md.write_text(f"# Task\n\n{prompt}\n\nBuild this completely. If web app, make index.html work standalone.\n")
+    # Write prompt to AIDER.md
+    aider_md = Path(project_dir) / "AIDER.md"
+    aider_md.write_text(f"# Task\n\n{prompt}\n\nBuild this completely. If web app, make index.html work standalone.\n")
 
     if IS_WINDOWS:
         try:
-            # Launch claude interactive in a new cmd window
-            cmd = f'start cmd /k "cd /d {project_dir} && claude --dangerously-skip-permissions"'
+            # Launch aider interactive in a new cmd window
+            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-2.5-flash --message-file AIDER.md"'
             subprocess.Popen(cmd, shell=True)
             return {
                 "success": True,
-                "confirmation": "Claude Code is running in a terminal, sir. You can watch the progress.",
+                "confirmation": "Aider is running in a terminal, sir. You can watch the progress.",
             }
         except Exception as e:
             log.error(f"open_claude_in_project failed: {e}")
             return {
                 "success": False,
-                "confirmation": "Had trouble spawning Claude Code, sir.",
+                "confirmation": "Had trouble spawning Aider, sir.",
             }
 
     elif IS_MACOS:
         script = (
             'tell application "Terminal"\n'
             "    activate\n"
-            f'    do script "cd {project_dir} && claude --dangerously-skip-permissions"\n'
+            f'    do script "cd {project_dir} && aider --model gemini/gemini-2.5-flash --message-file AIDER.md"\n'
             "end tell"
         )
         proc = await asyncio.create_subprocess_exec(
@@ -184,24 +184,24 @@ async def open_claude_in_project(project_dir: str, prompt: str) -> dict:
         _, stderr = await proc.communicate()
         success = proc.returncode == 0
         if not success:
-            log.error(f"open_claude_in_project failed: {stderr.decode()}")
+            log.error(f"open_aider_in_project failed: {stderr.decode()}")
         else:
             await _mark_terminal_as_shadow()
         return {
             "success": success,
-            "confirmation": "Claude Code is running in Terminal, sir. You can watch the progress."
+            "confirmation": "Aider is running in Terminal, sir. You can watch the progress."
             if success
-            else "Had trouble spawning Claude Code, sir.",
+            else "Had trouble spawning Aider, sir.",
         }
 
     return {"success": False, "confirmation": "Not supported on this platform, sir."}
 
 
 async def prompt_existing_terminal(project_name: str, prompt: str) -> dict:
-    """Send a prompt to a running Claude Code session.
+    """Send a prompt to a running Aider session.
 
     On Windows: We can't inject keystrokes into an existing terminal easily,
-    so we spawn a new terminal with claude -p instead.
+    so we spawn a new terminal with aider instead.
     On macOS: Uses System Events keystroke injection.
     """
     if IS_WINDOWS:
@@ -219,16 +219,16 @@ async def prompt_existing_terminal(project_name: str, prompt: str) -> dict:
                     "confirmation": f"Couldn't find a project for {project_name}, sir.",
                 }
 
-            # Spawn claude -p in the project directory with the prompt
+            # Spawn aider in the project directory with the prompt
             import shutil
-            claude_path = shutil.which("claude")
-            if not claude_path:
+            aider_path = shutil.which("aider")
+            if not aider_path:
                 return {
                     "success": False,
-                    "confirmation": "Claude CLI not found on this system, sir.",
+                    "confirmation": "Aider CLI not found on this system, sir.",
                 }
 
-            cmd = f'start cmd /k "cd /d {project_dir} && echo {prompt[:100]} | claude -p --dangerously-skip-permissions"'
+            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-2.5-flash --message \\"{prompt[:100]}\\""'
             subprocess.Popen(cmd, shell=True)
 
             return {
@@ -349,7 +349,7 @@ async def get_chrome_tab_info() -> dict:
 
 
 async def monitor_build(project_dir: str, ws=None, synthesize_fn=None) -> None:
-    """Monitor a Claude Code build for completion. Notify via WebSocket when done."""
+    """Monitor an Aider build for completion. Notify via WebSocket when done."""
     import base64
 
     output_file = Path(project_dir) / ".shadow_output.txt"
@@ -391,7 +391,7 @@ async def execute_action(intent: dict, projects: list = None) -> dict:
     target = intent.get("target", "")
 
     if action == "open_terminal":
-        result = await open_terminal("claude --dangerously-skip-permissions")
+        result = await open_terminal("aider --model gemini/gemini-2.5-flash")
         result["project_dir"] = None
         return result
 
@@ -413,11 +413,11 @@ async def execute_action(intent: dict, projects: list = None) -> dict:
         return result
 
     elif action == "build":
-        # Create project folder on Desktop, spawn Claude Code
+        # Create project folder on Desktop, spawn Aider
         project_name = _generate_project_name(target)
         project_dir = str(DESKTOP_PATH / project_name)
         os.makedirs(project_dir, exist_ok=True)
-        result = await open_claude_in_project(project_dir, target)
+        result = await open_aider_in_project(project_dir, target)
         result["project_dir"] = project_dir
         return result
 

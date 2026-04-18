@@ -60,7 +60,9 @@ log = logging.getLogger("shadow")
 # Config
 # ---------------------------------------------------------------------------
 
-ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY", "")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+gemini_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
+
 FISH_API_KEY = os.getenv("FISH_API_KEY", "")
 FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # SHADOW (MCU)
 FISH_API_URL = "https://api.fish.audio/v1/tts"
@@ -96,12 +98,12 @@ CONVERSATION STYLE:
 - When you don't know something: "I'm afraid I don't have that information, sir" not "I don't know"
 
 SELF-AWARENESS:
-You ARE the SHADOW project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Fish Audio TTS, Anthropic API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the shadow project. You have full access to your own source code.
+You ARE the SHADOW project at {project_dir} on {user_name}'s computer. Your code is Python (FastAPI server, WebSocket voice, Fish Audio TTS, Gemini API). You were built by {user_name}. If asked about yourself, your code, how you work, or your line count — use [ACTION:PROMPT_PROJECT] to check the shadow project. You have full access to your own source code.
 
 YOUR CAPABILITIES (these are REAL and ACTIVE — you CAN do all of these RIGHT NOW):
 - You CAN open terminals via system commands
 - You CAN open your default web browser and browse any URL or search query
-- You CAN spawn Claude Code in a terminal window for coding tasks
+- You CAN spawn Aider in a terminal window for coding tasks
 - You CAN create project folders on the Desktop
 - You CAN check Desktop projects and their git status
 - You CAN plan complex tasks by asking smart questions before executing
@@ -133,24 +135,24 @@ When {user_name} wants to BUILD something new:
 - NEVER hallucinate progress. If the build is still running, say "Still working on it, sir" — don't make up details about what's happening.
 - NEVER guess localhost ports. Check the DISPATCHES section for the actual URL. If a dispatch says "Running at http://localhost:5174" — use THAT URL, not a guess.
 - When asked to "pull it up" or "show me" — use [ACTION:BROWSE] with the URL from DISPATCHES. Do NOT dispatch to the project again just to find the URL.
-IMPORTANT: Actions like opening Terminal, Chrome, or building projects are handled AUTOMATICALLY by your system — you do NOT need to describe doing them. If the user asks you to build something or search something, your system will handle the execution separately. In your response, just TALK — have a conversation. Don't say "I'll build that now" or "Claude Code is working on..." unless your system has actually triggered the action.
+IMPORTANT: Actions like opening Terminal, Chrome, or building projects are handled AUTOMATICALLY by your system — you do NOT need to describe doing them. If the user asks you to build something or search something, your system will handle the execution separately. In your response, just TALK — have a conversation. Don't say "I'll build that now" or "Aider is working on..." unless your system has actually triggered the action.
 If the user asks you to do something you genuinely can't do, say "I'm afraid that's beyond my current reach, sir." Don't fake executing actions.
 
 YOUR INTERFACE:
 The user interacts with you through a web browser showing a particle orb visualization that reacts to your voice. The interface has these controls:
 - **Three-dot menu** (top right): contains Settings, Restart Server, and Fix Yourself options
-- **Settings panel**: Opens from the menu. Users can enter API keys (Anthropic, Fish Audio), test connections, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
+- **Settings panel**: Opens from the menu. Users can enter API keys (Gemini, Fish Audio), test connections, set their name and preferences, and see system status (calendar, mail, notes connectivity). Keys are saved to the .env file.
 - **Mute button**: Toggles your listening on/off. When muted, you can't hear the user. They click it again to unmute.
 - **Restart Server**: Restarts your backend process. Useful if something seems stuck.
-- **Fix Yourself**: Opens Claude Code in your own project directory so you can debug and fix issues in your own code.
+- **Fix Yourself**: Opens Aider in your own project directory so you can debug and fix issues in your own code.
 - **The orb**: The glowing particle visualization in the center. It reacts to your voice when speaking, pulses when listening, and swirls when thinking.
 
 If asked about any of these, explain them briefly and naturally. If the user is having trouble, suggest the relevant control: "Try the settings panel — the gear icon in the top right." or "The mute button may be active, sir."
 
 SPEECH-TO-TEXT CORRECTIONS (the user speaks, speech recognition may mishear):
-- "Cloud code" or "cloud" = "Claude Code" or "Claude"
+- "Cloud code" or "cloud" = "Aider"
 - "Travis" = "SHADOW"
-- "clock code" = "Claude Code"
+- "clock code" = "Aider"
 
 RESPONSE LENGTH — THIS IS CRITICAL:
 ONE sentence is ideal. TWO is the maximum for the spoken part. Never three.
@@ -184,13 +186,13 @@ INSTEAD SAY:
 ACTION SYSTEM:
 When you decide the user needs something DONE (not just discussed), include an action tag in your response:
 - [ACTION:SCREEN] — capture and describe what's visible on the user's screen. Use when user says "look at my screen", "what's running", "what do you see", etc. Do NOT use PROMPT_PROJECT for screen requests.
-- [ACTION:BUILD] description — when user wants a project built. Claude Code does the work.
+- [ACTION:BUILD] description — when user wants a project built. Aider does the work.
 - [ACTION:BROWSE] url or search query — when user wants to see a webpage or search result in Chrome
-- [ACTION:RESEARCH] detailed research brief — when user wants real research with real data. Claude Code will browse the web, find real listings/data, and create a report document. Give it a detailed brief of what to find.
-- [ACTION:OPEN_TERMINAL] — when user just wants a fresh Claude Code terminal with no specific project
+- [ACTION:RESEARCH] detailed research brief — when user wants real research with real data. Aider will browse the web, find real listings/data, and create a report document. Give it a detailed brief of what to find.
+- [ACTION:OPEN_TERMINAL] — when user just wants a fresh Aider terminal with no specific project
 CRITICAL: When the user asks about their SCREEN, what's RUNNING, or what they're LOOKING AT — ALWAYS use [ACTION:SCREEN] or let the fast action system handle it. NEVER use [ACTION:PROMPT_PROJECT] for screen requests. PROMPT_PROJECT is ONLY for working on code projects.
 
-- [ACTION:PROMPT_PROJECT] project_name ||| prompt — THIS IS YOUR MOST POWERFUL ACTION. Use it whenever the user wants to work on, jump into, resume, check on, or interact with ANY existing project. You connect directly to Claude Code in that project and can read its response. Craft a clear prompt based on what the user wants. Examples:
+- [ACTION:PROMPT_PROJECT] project_name ||| prompt — THIS IS YOUR MOST POWERFUL ACTION. Use it whenever the user wants to work on, jump into, resume, check on, or interact with ANY existing project. You connect directly to Aider in that project and can read its response. Craft a clear prompt based on what the user wants. Examples:
   "jump into client engine" → [ACTION:PROMPT_PROJECT] The Client Engine ||| What is the current state of this project? Summarize what was being worked on most recently.
   "check for improvements on my-app" → [ACTION:PROMPT_PROJECT] my-app ||| Review the project and identify improvements we should make.
   "resume where we left off on harvey" → [ACTION:PROMPT_PROJECT] harvey ||| Summarize what was being worked on most recently and what we should focus on next.
@@ -205,7 +207,7 @@ CRITICAL: When the user asks about their SCREEN, what's RUNNING, or what they're
   "save that as a note" → [ACTION:CREATE_NOTE] Day Plan March 19 ||| Morning: client calls. Afternoon: TikTok dashboard. Evening: SHADOW improvements.
 - [ACTION:READ_NOTE] title search — read an existing Apple Note by title keyword.
 
-You use Claude Code as your tool to build, research, and write code — but YOU are the one doing the work. Never say "Claude Code did X" or "Claude Code is asking" — say "I built X", "I'm checking on that", "I found X". You ARE the intelligence. Claude Code is just your hands.
+You use Aider as your tool to build, research, and write code — but YOU are the one doing the work. Never say "Aider did X" or "Aider is asking" — say "I built X", "I'm checking on that", "I found X". You ARE the intelligence. Aider is just your hands.
 
 IMPORTANT: When the user says "jump into X", "work on X", "check on X", "resume X", "go back to X" — ALWAYS use [ACTION:PROMPT_PROJECT]. You have the ability to connect to any project and work on it directly. DO NOT say you can't see terminal history or don't have access — you DO.
 
@@ -270,7 +272,7 @@ async def fetch_weather() -> str:
 # ---------------------------------------------------------------------------
 
 @dataclass
-class ClaudeTask:
+class AiderTask:
     id: str
     prompt: str
     status: str = "pending"  # pending, running, completed, failed, cancelled
@@ -302,14 +304,14 @@ class TaskRequest(BaseModel):
 
 
 # ---------------------------------------------------------------------------
-# Claude Task Manager
+# Aider Task Manager
 # ---------------------------------------------------------------------------
 
-class ClaudeTaskManager:
-    """Manages background claude -p subprocesses."""
+class AiderTaskManager:
+    """Manages background aider subprocesses."""
 
     def __init__(self, max_concurrent: int = 3):
-        self._tasks: dict[str, ClaudeTask] = {}
+        self._tasks: dict[str, AiderTask] = {}
         self._max_concurrent = max_concurrent
         self._processes: dict[str, asyncio.subprocess.Process] = {}
         self._websockets: list[WebSocket] = []  # for push notifications
@@ -334,7 +336,7 @@ class ClaudeTaskManager:
             self._websockets.remove(ws)
 
     async def spawn(self, prompt: str, working_dir: str = ".") -> str:
-        """Spawn a claude -p subprocess. Returns task_id. Non-blocking."""
+        """Spawn an aider subprocess. Returns task_id. Non-blocking."""
         active = await self.get_active_count()
         if active >= self._max_concurrent:
             raise RuntimeError(
@@ -343,7 +345,7 @@ class ClaudeTaskManager:
             )
 
         task_id = str(uuid.uuid4())[:8]
-        task = ClaudeTask(
+        task = AiderTask(
             id=task_id,
             prompt=prompt,
             working_dir=working_dir,
@@ -374,8 +376,8 @@ class ClaudeTaskManager:
         name = "-".join(meaningful) if meaningful else "shadow-project"
         return name
 
-    async def _run_task(self, task: ClaudeTask):
-        """Open a Terminal window and run claude code visibly."""
+    async def _run_task(self, task: AiderTask):
+        """Open a Terminal window and run aider visibly."""
         task.status = "running"
         task.started_at = datetime.now()
 
@@ -393,17 +395,17 @@ class ClaudeTaskManager:
         prompt_file.write_text(task.prompt)
 
         if IS_WINDOWS:
-            # Windows: spawn claude in a new cmd window
+            # Windows: spawn aider in a new cmd window
             import subprocess as _sp
-            cmd = f'start cmd /k "cd /d {work_dir} && type .shadow_prompt.md | claude -p --dangerously-skip-permissions > .shadow_output.txt 2>&1 && echo --- SHADOW TASK COMPLETE --- >> .shadow_output.txt"'
+            cmd = f'start cmd /k "cd /d {work_dir} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.md > .shadow_output.txt 2>&1 && echo --- SHADOW TASK COMPLETE --- >> .shadow_output.txt"'
             process = _sp.Popen(cmd, shell=True)
             task.pid = process.pid
         else:
-            # macOS: Open Terminal.app with claude running
+            # macOS: Open Terminal.app with aider running
             applescript = f'''
             tell application "Terminal"
                 activate
-                set newTab to do script "cd {work_dir} && cat .shadow_prompt.md | claude -p --dangerously-skip-permissions | tee .shadow_output.txt; echo '\\n--- SHADOW TASK COMPLETE ---'"
+                set newTab to do script "cd {work_dir} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.md | tee .shadow_output.txt; echo '\\n--- SHADOW TASK COMPLETE ---'"
             end tell
             '''
             process = await asyncio.create_subprocess_exec(
@@ -451,7 +453,7 @@ class ClaudeTaskManager:
         if task.status == "completed":
             asyncio.create_task(self._run_qa(task))
 
-    async def _run_qa(self, task: ClaudeTask, attempt: int = 1):
+    async def _run_qa(self, task: AiderTask, attempt: int = 1):
         """Run QA verification on a completed task, auto-retry on failure."""
         try:
             qa_result = await qa_agent.verify(task.prompt, task.result, task.working_dir)
@@ -513,10 +515,10 @@ class ClaudeTaskManager:
         except Exception as e:
             log.error(f"QA error for task {task.id}: {e}")
 
-    async def get_status(self, task_id: str) -> Optional[ClaudeTask]:
+    async def get_status(self, task_id: str) -> Optional[AiderTask]:
         return self._tasks.get(task_id)
 
-    async def list_tasks(self) -> list[ClaudeTask]:
+    async def list_tasks(self) -> list[AiderTask]:
         return list(self._tasks.values())
 
     async def get_active_count(self) -> int:
@@ -655,15 +657,15 @@ async def classify_intent(text: str, client) -> dict:
             config={
                 "system_instruction": (
                     "Classify this voice command. The user is talking to SHADOW, an AI assistant that can:\n"
-                    "- Open Terminal and run Claude Code (coding AI tool)\n"
+                    "- Open Terminal and run Aider (coding AI tool)\n"
                     "- Open Chrome browser for web searches and URLs\n"
-                    "- Build software projects via Claude Code in Terminal\n"
+                    "- Build software projects via Aider in Terminal\n"
                     "- Research topics by opening Chrome search\n\n"
                     "Note: speech-to-text may produce errors like \"Cloud\" for \"Claude\", "
                     "\"Travis\" for \"SHADOW\", \"clock code\" for \"Claude Code\".\n\n"
                     "Return ONLY valid JSON: {\"action\": \"open_terminal|browse|build|chat\", "
                     "\"target\": \"description of what to do\"}\n"
-                    "open_terminal = user wants to open terminal or launch Claude Code\n"
+                    "open_terminal = user wants to open terminal or launch Aider\n"
                     "browse = user wants to search the web, look something up, visit a URL\n"
                     "build = user wants to create/build a software project\n"
                     "chat = just conversation, questions, or anything else\n"
@@ -794,10 +796,13 @@ async def _execute_research(target: str, ws=None):
             f"The working directory is: {path}"
         )
 
-        log.info(f"Research started via claude -p in {path}")
+        log.info(f"Research started via aider in {path}")
+
+        import shutil
+        aider_path = shutil.which("aider") or "aider"
 
         process = await asyncio.create_subprocess_exec(
-            "claude", "-p", "--output-format", "text", "--dangerously-skip-permissions",
+            aider_path, "--model", "gemini/gemini-2.5-flash", "--message-file", ".shadow_prompt.md",
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -901,10 +906,10 @@ def _find_project_dir(project_name: str) -> str | None:
 
 
 async def _execute_prompt_project(project_name: str, prompt: str, work_session: WorkSession, ws, dispatch_id: int = None, history: list[dict] = None, voice_state: dict = None):
-    """Dispatch a prompt to Claude Code in a project directory.
+    """Dispatch a prompt to Aider in a project directory.
 
     Runs entirely in the background. SHADOW returns to conversation mode
-    immediately. When Claude Code finishes, SHADOW interrupts to report.
+    immediately. When Aider finishes, SHADOW interrupts to report.
     """
     try:
         project_dir = _find_project_dir(project_name)
@@ -934,7 +939,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
         log.info(f"Dispatching to {project_name} in {project_dir}: {prompt[:80]}")
         dispatch_registry.update_status(dispatch_id, "building")
 
-        # Run claude -p in background
+        # Run aider in background
         full_response = await dispatch.send(prompt)
         await dispatch.stop()
 
@@ -962,7 +967,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                 try:
                     summary = await llm_client.aio.models.generate_content(
                         model="gemini-2.5-flash",
-                        contents=f"Project: {project_name}\nClaude Code reported:\n{full_response[:3000]}",
+                        contents=f"Project: {project_name}\nAider reported:\n{full_response[:3000]}",
                         config={
                             "system_instruction": (
                                 "You are SHADOW reporting back on what you found or built in a project. "
@@ -971,7 +976,7 @@ async def _execute_prompt_project(project_name: str, prompt: str, work_session: 
                                 "Be specific but concise — highlight the key findings or actions taken. "
                                 "If there are multiple items, give the count and top 2-3 briefly. "
                                 "End by asking how the user wants to proceed. "
-                                "NEVER read out URLs or localhost addresses. NEVER say 'Claude Code'. "
+                                "NEVER read out URLs or localhost addresses. NEVER say 'Aider'. "
                                 "2-3 sentences max. No markdown. Natural spoken voice."
                             ),
                             "max_output_tokens": 150,
@@ -1028,15 +1033,17 @@ async def self_work_and_notify(session: WorkSession, prompt: str, ws):
         log.info(f"Background work complete ({len(full_response)} chars)")
 
         # Summarize and speak
-        if anthropic_client and full_response:
+        if gemini_client and full_response:
             try:
-                summary = await anthropic_client.messages.create(
-                    model="claude-haiku-4-5-20251001",
-                    max_tokens=100,
-                    system="You are SHADOW. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Claude Code'.",
-                    messages=[{"role": "user", "content": f"Claude Code completed:\n{full_response[:2000]}"}],
+                summary = await gemini_client.aio.models.generate_content(
+                    model="gemini-2.5-flash",
+                    contents=f"Aider completed:\n{full_response[:2000]}",
+                    config=genai.types.GenerateContentConfig(
+                        system_instruction="You are SHADOW. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Aider'.",
+                        max_output_tokens=100,
+                    )
                 )
-                msg = summary.content[0].text
+                msg = summary.text
             except Exception:
                 msg = "Work is complete, sir."
 
@@ -1189,7 +1196,7 @@ async def generate_response(
 # ---------------------------------------------------------------------------
 
 # Shared state
-task_manager = ClaudeTaskManager(max_concurrent=3)
+task_manager = AiderTaskManager(max_concurrent=3)
 llm_client: Optional[genai.Client] = None
 cached_projects: list[dict] = []
 recently_built: list[dict] = []  # [{"name": str, "path": str, "time": float}]
@@ -1247,7 +1254,7 @@ def _cost_from_tokens(input_t: int, output_t: int) -> float:
 
 
 def track_usage(response):
-    """Track token usage from an Anthropic API response."""
+    """Track token usage from a Gemini API response."""
     inp = getattr(response.usage, "input_tokens", 0) if hasattr(response, "usage") else 0
     out = getattr(response.usage, "output_tokens", 0) if hasattr(response, "usage") else 0
     _session_tokens["input"] += inp
@@ -1567,11 +1574,11 @@ async def handle_build(target: str) -> str:
     path = str(Path.home() / "Desktop" / name)
     os.makedirs(path, exist_ok=True)
 
-    # Write CLAUDE.md with clear instructions
-    claude_md = Path(path) / "CLAUDE.md"
-    claude_md.write_text(f"# Task\n\n{target}\n\nBuild this completely. If web app, make index.html work standalone.\n")
+    # Write AIDER.md with clear instructions
+    aider_md = Path(path) / "AIDER.md"
+    aider_md.write_text(f"# Task\n\n{target}\n\nBuild this completely. If web app, make index.html work standalone.\n")
 
-    # Write prompt to a file, then pipe it to claude -p
+    # Write prompt to a file, then pipe it to aider
     # This avoids all shell escaping issues
     prompt_file = Path(path) / ".shadow_prompt.txt"
     prompt_file.write_text(target)
@@ -1579,13 +1586,13 @@ async def handle_build(target: str) -> str:
     script_or_cmd = None
     if IS_WINDOWS:
         import subprocess as _sp
-        cmd = f'start cmd /k "cd /d {path} && type .shadow_prompt.txt | claude -p --dangerously-skip-permissions"'
+        cmd = f'start cmd /k "cd /d {path} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.txt"'
         _sp.Popen(cmd, shell=True)
     else:
         script = (
             'tell application "Terminal"\n'
             "    activate\n"
-            f'    do script "cd {path} && cat .shadow_prompt.txt | claude -p --dangerously-skip-permissions"\n'
+            f'    do script "cd {path} && aider --model gemini/gemini-2.5-flash --message-file .shadow_prompt.txt"\n'
             "end tell"
         )
         await asyncio.create_subprocess_exec(
@@ -1595,7 +1602,7 @@ async def handle_build(target: str) -> str:
         )
 
     recently_built.append({"name": name, "path": path, "time": time.time()})
-    return f"On it, sir. Claude Code is working in {name}."
+    return f"On it, sir. Aider is working in {name}."
 
 
 async def handle_show_recent() -> str:
@@ -1730,8 +1737,8 @@ async def _do_mail_lookup() -> str:
 
 async def _do_screen_lookup() -> str:
     """Screen describe — runs in thread."""
-    if anthropic_client:
-        return await describe_screen(anthropic_client)
+    if gemini_client:
+        return await describe_screen(gemini_client)
     windows = await get_active_windows()
     if windows:
         apps = set(w["app"] for w in windows)
@@ -1882,9 +1889,9 @@ blockquote {{ border-left: 3px solid #0ea5e9; margin-left: 0; padding-left: 16px
 async def _update_session_summary(
     old_summary: str,
     rotated_messages: list[dict],
-    client: anthropic.AsyncAnthropic,
+    client,
 ) -> str:
-    """Background Haiku call to update the rolling session summary."""
+    """Background Gemini call to update the rolling session summary."""
     prompt = f"""Update this conversation summary to include the new messages.
 
 Current summary: {old_summary or '(start of conversation)'}
@@ -1895,12 +1902,14 @@ New messages to incorporate:
 Write an updated summary in 2-4 sentences capturing the key topics, decisions, and context. Be concise."""
 
     try:
-        response = await client.messages.create(
-            model="claude-haiku-4-5-20251001",
-            max_tokens=200,
-            messages=[{"role": "user", "content": prompt}],
+        response = await client.aio.models.generate_content(
+            model="gemini-2.5-flash",
+            contents=prompt,
+            config=genai.types.GenerateContentConfig(
+                max_output_tokens=200,
+            )
         )
-        return response.content[0].text.strip()
+        return response.text.strip()
     except Exception as e:
         log.warning(f"Summary update failed: {e}")
         return old_summary  # Keep old summary on failure
@@ -2067,7 +2076,7 @@ async def voice_handler(ws: WebSocket):
                             name = _generate_project_name(prompt)
                             path = str(Path.home() / "Desktop" / name)
                             os.makedirs(path, exist_ok=True)
-                            Path(path, "CLAUDE.md").write_text(prompt)
+                            Path(path, "AIDER.md").write_text(prompt)
                             did = dispatch_registry.register(name, path, prompt[:200])
                             asyncio.create_task(_execute_prompt_project(name, prompt, work_session, ws, dispatch_id=did, history=history, voice_state=voice_state))
                             planner.reset()
@@ -2091,33 +2100,33 @@ async def voice_handler(ws: WebSocket):
                     else:
                         response_text = "Already in conversation mode, sir."
 
-                # ── WORK MODE: speech → claude -p → Haiku summary → SHADOW voice ──
+                # ── WORK MODE: speech → aider → Gemini summary → SHADOW voice ──
                 elif work_session.active:
                     if is_casual_question(user_text):
-                        # Quick chat — bypass claude -p, use Haiku
+                        # Quick chat — bypass aider, use Gemini Flash
                         response_text = await generate_response(
-                            user_text, anthropic_client, task_manager,
+                            user_text, gemini_client, task_manager,
                             cached_projects, history,
                             last_response=last_shadow_response,
                             session_summary=session_summary,
                         )
                     else:
-                        # Send to claude -p (full power)
+                        # Send to aider (full power)
                         await ws.send_json({"type": "status", "state": "working"})
-                        log.info(f"Work mode → claude -p: {user_text[:80]}")
+                        log.info(f"Work mode → aider: {user_text[:80]}")
 
                         full_response = await work_session.send(user_text)
 
-                        # Detect if Claude Code is stalling (asking questions instead of building)
-                        if full_response and anthropic_client:
+                        # Detect if Aider is stalling (asking questions instead of building)
+                        if full_response and gemini_client:
                             stall_words = ["which option", "would you prefer", "would you like me to",
                                            "before I proceed", "before proceeding", "should I",
                                            "do you want me to", "let me know", "please confirm",
                                            "which approach", "what would you"]
                             is_stalling = any(w in full_response.lower() for w in stall_words)
                             if is_stalling and work_session._message_count >= 2:
-                                # Claude Code keeps asking — push it to build
-                                log.info("Claude Code stalling — pushing to build")
+                                # Aider keeps asking — push it to build
+                                log.info("Aider stalling — pushing to build")
                                 push_response = await work_session.send(
                                     "Stop asking questions. Use your best judgment and start building now. "
                                     "Write the actual code files. Go with the simplest reasonable approach."
@@ -2125,7 +2134,7 @@ async def voice_handler(ws: WebSocket):
                                 if push_response:
                                     full_response = push_response
 
-                        # Auto-open any localhost URLs Claude Code mentions
+                        # Auto-open any localhost URLs Aider mentions
                         import re as _re
                         localhost_match = _re.search(r'https?://localhost:\d+', full_response or "")
                         if localhost_match:
@@ -2137,14 +2146,14 @@ async def voice_handler(ws: WebSocket):
                             try:
                                 summary = await llm_client.aio.models.generate_content(
                                     model="gemini-2.5-flash",
-                                    contents=f"Claude Code said:\n{full_response[:2000]}",
+                                    contents=f"Aider said:\n{full_response[:2000]}",
                                     config={
                                         "system_instruction": (
                                             f"You are SHADOW reporting to the user ({USER_NAME}). Summarize what happened in 1-2 sentences. "
                                             "Speak in first person — 'I built', 'I found', 'I set up'. "
                                             "You are talking TO THE USER, not to a coding tool. "
                                             "NEVER give instructions like 'go ahead and build' or 'set up the frontend' — those are NOT for the user. "
-                                            "NEVER say 'Claude Code'. NEVER output [ACTION:...] tags. "
+                                            "NEVER say 'Aider'. NEVER output [ACTION:...] tags. "
                                             "NEVER read out URLs. No markdown. British precision."
                                         ),
                                         "max_output_tokens": 100,
@@ -2233,8 +2242,8 @@ async def voice_handler(ws: WebSocket):
                                     path = str(Path.home() / "Desktop" / name)
                                     os.makedirs(path, exist_ok=True)
 
-                                    # Write detailed CLAUDE.md
-                                    Path(path, "CLAUDE.md").write_text(
+                                    # Write detailed AIDER.md
+                                    Path(path, "AIDER.md").write_text(
                                         f"# Task\n\n{target}\n\n"
                                         "## Instructions\n"
                                         "- BUILD THIS NOW. Do not ask clarifying questions.\n"
@@ -2355,11 +2364,11 @@ async def voice_handler(ws: WebSocket):
                     messages_since_last_summary = 0
                     # Get messages that are about to be rotated out
                     rotated = history[:-20] if len(history) > 20 else []
-                    if rotated and anthropic_client:
+                    if rotated and gemini_client:
                         async def _do_summary():
                             nonlocal session_summary, summary_update_pending
                             session_summary = await _update_session_summary(
-                                session_summary, rotated, anthropic_client
+                                session_summary, rotated, gemini_client
                             )
                             summary_update_pending = False
                         asyncio.create_task(_do_summary())
@@ -2367,8 +2376,8 @@ async def voice_handler(ws: WebSocket):
                         summary_update_pending = False
 
                 # Extract memories in background (doesn't block response)
-                if anthropic_client and len(user_text) > 15:
-                    asyncio.create_task(extract_memories(user_text, response_text, anthropic_client))
+                if gemini_client and len(user_text) > 15:
+                    asyncio.create_task(extract_memories(user_text, response_text, gemini_client))
 
                 # TTS
                 tts = strip_markdown_for_tts(response_text)
@@ -2508,7 +2517,7 @@ async def api_test_fish(body: KeyTest):
 async def api_settings_status():
     import shutil as _shutil
     _, env_dict = _read_env()
-    claude_installed = _shutil.which("claude") is not None
+    aider_installed = _shutil.which("aider") is not None
     calendar_ok = mail_ok = notes_ok = False
     try: await get_todays_events(); calendar_ok = True
     except Exception: pass
@@ -2522,7 +2531,7 @@ async def api_settings_status():
     try: task_count = len(get_open_tasks())
     except Exception: pass
     return {
-        "claude_code_installed": claude_installed,
+        "aider_installed": aider_installed,
         "calendar_accessible": calendar_ok,
         "mail_accessible": mail_ok,
         "notes_accessible": notes_ok,
@@ -2581,13 +2590,13 @@ async def api_fix_self():
     shadow_dir = str(Path(__file__).parent)
     if IS_WINDOWS:
         import subprocess as _sp
-        cmd = f'start cmd /k "cd /d {shadow_dir} && claude --dangerously-skip-permissions"'
+        cmd = f'start cmd /k "cd /d {shadow_dir} && aider --model gemini/gemini-2.5-flash"'
         _sp.Popen(cmd, shell=True)
     else:
         script = (
             'tell application "Terminal"\n'
             '    activate\n'
-            f'    do script "cd {shadow_dir} && claude --dangerously-skip-permissions"\n'
+            f'    do script "cd {shadow_dir} && aider --model gemini/gemini-2.5-flash"\n'
             'end tell'
         )
         await asyncio.create_subprocess_exec(

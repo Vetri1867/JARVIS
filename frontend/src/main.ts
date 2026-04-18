@@ -32,7 +32,7 @@ function showError(msg: string) {
 
 function updateStatus(state: State) {
   const labels: Record<State, string> = {
-    idle: "",
+    idle: "waiting for wake word...",
     listening: "listening...",
     thinking: "thinking...",
     speaking: "",
@@ -90,6 +90,12 @@ const voiceInput = createVoiceInput(
   },
   (msg: string) => {
     showError(msg);
+  },
+  () => {
+    transition("listening");
+  },
+  () => {
+    transition("idle");
   }
 );
 
@@ -151,7 +157,7 @@ socket.onMessage((msg) => {
 // Start listening after a brief delay for the orb to render
 setTimeout(() => {
   voiceInput.start();
-  transition("listening");
+  transition("idle");
 }, 1000);
 
 // Resume AudioContext on ANY user interaction (browser autoplay policy)

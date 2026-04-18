@@ -1,5 +1,5 @@
 """
-SHADOW Prompt Templates — Structured prompts for Claude Code tasks.
+SHADOW Prompt Templates — Structured prompts for Aider tasks.
 
 Each template is a format string with named placeholders.
 Templates are matched by task type and optionally by keyword analysis.

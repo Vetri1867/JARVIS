@@ -1,11 +1,11 @@
 """
-SHADOW Work Mode — persistent claude -p sessions tied to projects.
+SHADOW Work Mode — persistent aider sessions tied to projects.
 
 SHADOW can connect to any project directory and maintain a conversation
-with Claude Code. Uses --continue to resume the most recent session
+with Aider. Aider automatically resumes the conversation history
 in that directory, so context persists across messages.
 
-The user sees Claude Code working in their Terminal window.
+The user sees Aider working in their Terminal window.
 SHADOW reads the responses via subprocess, summarizes, and reports back.
 """
 
@@ -21,10 +21,10 @@ SESSION_FILE = Path(__file__).parent / "data" / "active_session.json"
 
 
 class WorkSession:
-    """A claude -p session tied to a project directory.
+    """An aider session tied to a project directory.
 
     Each project gets its own session. SHADOW can switch between projects
-    and --continue picks up where the last message left off.
+    and Aider picks up where the last message left off automatically.
     """
 
     def __init__(self):
@@ -56,24 +56,20 @@ class WorkSession:
         log.info(f"Work mode started: {self._project_name} ({working_dir})")
 
     async def send(self, user_text: str) -> str:
-        """Send a message to claude -p and get the full response.
+        """Send a message to aider and get the full response.
 
-        First message in a session: fresh claude -p
-        Subsequent messages: claude -p --continue (resumes last session in dir)
+        Aider automatically picks up context from the project directory.
         """
-        claude_path = shutil.which("claude")
-        if not claude_path:
-            return "Claude CLI not found on this system."
+        aider_path = shutil.which("aider")
+        if not aider_path:
+            return "Aider CLI not found on this system."
 
         cmd = [
-            claude_path, "-p",
-            "--output-format", "text",
-            "--dangerously-skip-permissions",
+            aider_path,
+            "--model", "gemini/gemini-2.5-flash",
+            "--no-auto-commits",
+            "--yes-always",
         ]
-
-        # Use --continue for subsequent messages to maintain context
-        if self._message_count > 0:
-            cmd.append("--continue")
 
         self._status = "working"
 
@@ -97,15 +93,15 @@ class WorkSession:
 
             if process.returncode != 0:
                 error = stderr.decode().strip()[:200]
-                log.error(f"claude -p error: {error}")
+                log.error(f"aider error: {error}")
                 self._status = "error"
                 return f"Hit a problem, sir: {error}"
 
-            log.info(f"Claude Code response for {self._project_name} ({len(response)} chars)")
+            log.info(f"Aider response for {self._project_name} ({len(response)} chars)")
             return response
 
         except asyncio.TimeoutError:
-            log.error("claude -p timed out after 300s")
+            log.error("aider timed out after 300s")
             self._status = "timeout"
             return "That's taking longer than expected, sir. The operation timed out."
         except Exception as e:
@@ -162,7 +158,7 @@ class WorkSession:
 def is_casual_question(text: str) -> bool:
     """Detect if a message is casual chat vs work-related.
 
-    Casual questions go to Haiku (fast). Work goes to claude -p (powerful).
+    Casual questions go to Gemini Flash (fast). Work goes to aider (powerful).
     """
     t = text.lower().strip()
 

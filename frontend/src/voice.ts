@@ -18,7 +18,9 @@ declare const webkitSpeechRecognition: any;
 
 export function createVoiceInput(
   onTranscript: (text: string) => void,
-  onError: (msg: string) => void
+  onError: (msg: string) => void,
+  onWake?: () => void,
+  onSleep?: () => void
 ): VoiceInput {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const SR = (window as any).SpeechRecognition || (typeof webkitSpeechRecognition !== "undefined" ? webkitSpeechRecognition : null);
@@ -37,35 +39,59 @@ export function createVoiceInput(
   let isAwake = false;
   let awakeTimeout: any = null;
 
+  const WAKE_WORDS = ["shadow", "sadow", "shallow", "shatter", "chateau", "shaddo", "shadows"];
+
   recognition.onresult = (event: any) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
       if (event.results[i].isFinal) {
         let text = event.results[i][0].transcript.trim();
-        if (!text) continue;
-
-        // Wake Word Detection: "SHADOW" (highly forgiving)
-        const wakeWordRegex = /shadow/i;
-        if (wakeWordRegex.test(text)) {
-          isAwake = true;
-          // Remove the wake word from the command
-          text = text.replace(wakeWordRegex, "").trim();
+        if (text) {
+          console.log("[HEARD]:", text);
           
-          // Stay awake for 15 seconds
-          if (awakeTimeout) clearTimeout(awakeTimeout);
-          awakeTimeout = setTimeout(() => { isAwake = false; }, 15000);
+          let lowerText = text.toLowerCase().replace(/[.,!?]/g, "");
+          let triggered = false;
+          let command = "";
 
-          // If they just said "SHADOW ARISE" with no command, trigger a greeting
-          if (!text) text = "Yes?";
-        }
+          if (!isAwake) {
+            const parts = lowerText.split(/\s+/);
+            const wwIndex = parts.findIndex((p: string) => WAKE_WORDS.includes(p));
+            if (wwIndex !== -1) {
+                triggered = true;
+                const wwUsed = parts[wwIndex];
+                const regex = new RegExp(`\\b${wwUsed}\\b`, 'i');
+                const match = text.match(regex);
+                if (match) {
+                    command = text.substring(match.index! + match[0].length).trim();
+                }
+            }
+          }
 
-        // Only send transcript if the system is awake
-        if (isAwake) {
-           // Keep it awake for another 15s after each command
-           if (awakeTimeout) clearTimeout(awakeTimeout);
-           awakeTimeout = setTimeout(() => { isAwake = false; }, 15000);
-           onTranscript(text);
-        } else {
-           console.log("[SHADOW SLEEPING] Ignored:", text);
+          if (triggered || isAwake) {
+            if (!isAwake) {
+              isAwake = true;
+              console.log("[SHADOW] woke up!");
+              if (onWake) onWake();
+            }
+            
+            if (awakeTimeout) clearTimeout(awakeTimeout);
+            
+            let textToSend = triggered ? command : text;
+            textToSend = textToSend.replace(/^[.,!?]\s*/, "").trim();
+
+            if (textToSend) {
+               // We got a command, go to sleep and process it
+               isAwake = false;
+               if (onSleep) onSleep();
+               onTranscript(textToSend);
+            } else {
+               // Just woke up, waiting for command
+               awakeTimeout = setTimeout(() => {
+                 isAwake = false;
+                 if (onSleep) onSleep();
+                 console.log("[SHADOW] went to sleep due to inactivity.");
+               }, 10000);
+            }
+          }
         }
       }
     }
