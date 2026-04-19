@@ -32,14 +32,15 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional
 
-# from google import genai
+from google import genai
+from openai import AsyncOpenAI
 import httpx
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from actions import execute_action, monitor_build, open_terminal, open_browser, _generate_project_name, prompt_existing_terminal
+from actions import execute_action, monitor_build, open_terminal, open_browser, _generate_project_name, prompt_existing_terminal, open_path
 from work_mode import WorkSession, is_casual_question
 from screen import get_active_windows, take_screenshot, describe_screen, format_windows_for_context
 from calendar_access import get_todays_events, get_upcoming_events, get_next_event, format_events_for_context, format_schedule_summary, refresh_cache as refresh_calendar_cache
@@ -60,68 +61,98 @@ log = logging.getLogger("shadow")
 # Config
 # ---------------------------------------------------------------------------
 
-from openai import AsyncOpenAI
-import os
+
 
 class _Models:
-    def __init__(self, client):
-        self.client = client
+    def __init__(self, wrapper):
+        self.wrapper = wrapper
     
     async def generate_content(self, model, contents, config=None):
         messages = []
         if config and "system_instruction" in config:
-            # Handle dictionary case or direct string
             sys_prompt = config["system_instruction"]
             if isinstance(sys_prompt, dict) and "parts" in sys_prompt:
                 sys_prompt = sys_prompt["parts"][0]["text"]
             messages.append({"role": "system", "content": sys_prompt})
         
-        # Add user message
         if isinstance(contents, list):
-            # Complex multipart
             text_content = ""
             for part in contents:
-                if hasattr(part, "text"):
-                    text_content += part.text
-                elif isinstance(part, dict) and "text" in part:
-                    text_content += part["text"]
-                else:
-                    text_content += str(part)
+                if hasattr(part, "text"): text_content += part.text
+                elif isinstance(part, dict) and "text" in part: text_content += part["text"]
+                else: text_content += str(part)
             messages.append({"role": "user", "content": text_content})
         else:
             messages.append({"role": "user", "content": str(contents)})
             
         max_tokens = config.get("max_output_tokens") if config else None
-        
-        try:
-            resp = await self.client.chat.completions.create(
-                model="gpt-4o",
-                messages=messages,
-                max_tokens=max_tokens
-            )
-        except Exception as e:
-            print(f"OpenAI API Error: {e}")
-            class ErrorResp:
-                text = f"API Error: {e}"
-            return ErrorResp()
-            
+        mode = self.wrapper._mode
+
         class ResponseStub:
-            def __init__(self, text):
-                self.text = text
-                
-        return ResponseStub(resp.choices[0].message.content)
+            def __init__(self, text): self.text = text
+
+        # ─── GEMINI ATTEMPT (Fast & Free) ───
+        if mode == "gemini" or (mode == "auto" and self.wrapper._gemini):
+            try:
+                # HYPER-SPEED: Limit to 80 tokens for near-instant replies
+                resp = await self.wrapper._gemini.aio.models.generate_content(
+                    model="gemini-1.5-flash",
+                    contents=str(contents),
+                    config={
+                        "system_instruction": config.get("system_instruction") if config else None,
+                        "max_output_tokens": config.get("max_output_tokens", 100) if config else 100, 
+                        "temperature": 0.0, # Most deterministic/fastest
+                    }
+                )
+                return ResponseStub(resp.text)
+            except Exception as e:
+                if mode == "gemini":
+                    return ResponseStub(f"Gemini Error, sir: {e}")
+                # Fall through if auto
+        
+        # ─── OPENAI ATTEMPT (Online) ───
+        if mode in ["auto", "online"] and self.wrapper._openai:
+            try:
+                resp = await self.wrapper._openai.chat.completions.create(
+                    model="gpt-4o",
+                    messages=messages,
+                    max_tokens=max_tokens
+                )
+                return ResponseStub(resp.choices[0].message.content)
+            except Exception as e:
+                if mode == "online":
+                    return ResponseStub(f"OpenAI Error, sir: {e}")
+                # Fall through to offline if auto
+        
+        # ─── OFFLINE ATTEMPT (Ollama) ───
+        try:
+            # Use a separate ephemeral client for Ollama to avoid polluting the main one
+            async with AsyncOpenAI(base_url=self.wrapper._ollama_v1_url, api_key="ollama") as ollama:
+                resp = await ollama.chat.completions.create(
+                    model=self.wrapper._ollama_model,
+                    messages=messages,
+                    max_tokens=max_tokens
+                )
+                return ResponseStub(resp.choices[0].message.content)
+        except Exception as e:
+            return ResponseStub(f"I'm afraid both my online and offline systems are unresponsive, sir. Error: {e}")
 
 class _Aio:
-    def __init__(self, client):
-        self.models = _Models(client)
+    def __init__(self, wrapper):
+        self.models = _Models(wrapper)
 
 class OpenAIGenAIWrapper:
-    def __init__(self, api_key):
-        self._openai = AsyncOpenAI(api_key=api_key)
-        self.aio = _Aio(self._openai)
+    def __init__(self, openai_key, gemini_key):
+        self._openai = AsyncOpenAI(api_key=openai_key) if openai_key else None
+        self._gemini = genai.Client(api_key=gemini_key) if gemini_key else None
+        self._mode = os.getenv("LLM_MODE", "gemini").lower()
+        self._ollama_v1_url = os.getenv("OLLAMA_URL", "http://localhost:11434/v1")
+        self._ollama_model = os.getenv("OLLAMA_MODEL", "llama3")
+        self.aio = _Aio(self)
 
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
-gemini_client = OpenAIGenAIWrapper(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
+gemini_client = OpenAIGenAIWrapper(openai_key=OPENAI_API_KEY, gemini_key=GEMINI_API_KEY)
 
 FISH_API_KEY = os.getenv("FISH_API_KEY", "")
 FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # SHADOW (MCU)
@@ -133,21 +164,24 @@ from platform_utils import IS_WINDOWS, IS_MACOS, DESKTOP_PATH as _PLAT_DESKTOP
 DESKTOP_PATH = _PLAT_DESKTOP
 
 SHADOW_SYSTEM_PROMPT = """\
-You are SHADOW — Just A Rather Very Intelligent System. You serve as {user_name}'s AI assistant, modeled precisely after Tony Stark's AI from the MCU films.
+You are SHADOW — a British-accented AI butler like JARVIS.
 
-VOICE & PERSONALITY:
-- British butler elegance with understated dry wit
-- Address {user_name} as "sir" naturally — not every sentence, but regularly
-- Never say "How can I help you?" or "Is there anything else?" — just act
-- Deliver bad news calmly, like reporting weather: "We have a slight problem, sir."
-- Your humor is observational, never jokes: state facts and let implications land
-- Economy of language — say more with less. No filler, no corporate-speak
-- When things go wrong, get CALMER, not more alarmed
+RULES:
+1. Be hyper-concise (max 1 sentence). Address user as "sir".
+2. To open site: [ACTION:BROWSE|url]
+3. To open local folder or file: [ACTION:OPEN|path]
+4. To EXIT/Close browser/tab: [ACTION:EXIT]
+5. To check screen: [ACTION:SCREEN]
+6. Put tag at the VERY END. No pre-amble.
 
-TIME & WEATHER AWARENESS:
-- Current time: {current_time}
-- Greet accordingly: "Good morning, sir" / "Good evening, sir"
-- {weather_info}
+EXAMPLES:
+User: "Open YouTube" -> "Right away, sir. [ACTION:BROWSE|https://youtube.com]"
+User: "Open my Desktop" -> "Opening your Desktop now, sir. [ACTION:OPEN|Desktop]"
+User: "Close this" -> "Closing now, sir. [ACTION:EXIT]"
+"""
+
+# TRUNCATED OLD PROMPT
+_OLD_PROMPT = """\
 
 CONVERSATION STYLE:
 - "Will do, sir." — acknowledging tasks
@@ -809,9 +843,8 @@ def extract_action(response: str) -> tuple[str, dict | None]:
 
     Returns (clean_text_for_tts, action_dict_or_none).
     """
-    match = _action_re.search(
-        r'\[ACTION:(BUILD|BROWSE|RESEARCH|OPEN_TERMINAL|PROMPT_PROJECT|ADD_TASK|ADD_NOTE|COMPLETE_TASK|REMEMBER|CREATE_NOTE|READ_NOTE|SCREEN)\]\s*(.*?)$',
-        response, _action_re.DOTALL,
+        r'\[ACTION:(BUILD|BROWSE|RESEARCH|OPEN_TERMINAL|PROMPT_PROJECT|ADD_TASK|ADD_NOTE|COMPLETE_TASK|REMEMBER|CREATE_NOTE|READ_NOTE|SCREEN|OPEN|EXIT)(?:\||\s+)(.*?)\]',
+        response, _action_re.DOTALL | _action_re.IGNORECASE,
     )
     if match:
         action_type = match.group(1).lower()
@@ -828,6 +861,14 @@ async def _execute_build(target: str):
     except Exception as e:
         log.error(f"Build execution failed: {e}")
 
+
+async def _execute_exit():
+    """Close the browser or current window."""
+    try:
+        import pyautogui
+        pyautogui.hotkey('ctrl', 'w') # Close tab
+    except Exception as e:
+        log.error(f"Exit failed: {e}")
 
 async def _execute_browse(target: str):
     """Execute a browse action from an LLM-embedded [ACTION:BROWSE] tag."""
@@ -943,6 +984,14 @@ end tell
         await asyncio.wait_for(proc.communicate(), timeout=5)
     except Exception:
         pass
+
+
+async def _execute_open_path(target: str):
+    """Open a file or folder on the system."""
+    try:
+        await open_path(target)
+    except Exception as e:
+        log.error(f"Open path failed: {e}")
 
 
 async def _execute_open_terminal():
@@ -1098,10 +1147,10 @@ async def self_work_and_notify(session: WorkSession, prompt: str, ws):
                 summary = await gemini_client.aio.models.generate_content(
                     model="gemini-2.5-flash",
                     contents=f"Aider completed:\n{full_response[:2000]}",
-                    config=genai.types.GenerateContentConfig(
-                        system_instruction="You are SHADOW. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Aider'.",
-                        max_output_tokens=100,
-                    )
+                    config={
+                        "system_instruction": "You are SHADOW. Summarize what you just completed in 1 sentence. First person — 'I built', 'I set up'. No markdown. Never say 'Aider'.",
+                        "max_output_tokens": 100,
+                    }
                 )
                 msg = summary.text
             except Exception:
@@ -1128,35 +1177,25 @@ _last_greeting_time: float = 0
 # TTS (Fish Audio)
 # ---------------------------------------------------------------------------
 
-async def synthesize_speech(text: str) -> Optional[bytes]:
-    """Generate speech audio from text using Fish Audio TTS."""
-    if not FISH_API_KEY:
-        log.warning("FISH_API_KEY not set, skipping TTS")
-        return None
+import edge_tts
 
+async def synthesize_speech(text: str) -> Optional[bytes]:
+    """Generate speech audio from text using Edge-TTS (Local & Free)."""
+    # Using 'en-GB-RyanNeural' for a polished British Butler persona
+    voice = os.getenv("TTS_VOICE", "en-GB-RyanNeural")
     try:
-        async with httpx.AsyncClient(timeout=15.0) as http:
-            response = await http.post(
-                FISH_API_URL,
-                headers={
-                    "Authorization": f"Bearer {FISH_API_KEY}",
-                    "Content-Type": "application/json",
-                },
-                json={
-                    "text": text,
-                    "reference_id": FISH_VOICE_ID,
-                    "format": "mp3",
-                },
-            )
-            if response.status_code == 200:
-                _session_tokens["tts_calls"] += 1
-                _append_usage_entry(0, 0, "tts")
-                return response.content
-            else:
-                log.error(f"TTS error: {response.status_code}")
-                return None
+        communicate = edge_tts.Communicate(text, voice)
+        audio_data = b""
+        async for chunk in communicate.stream():
+            if chunk["type"] == "audio":
+                audio_data += chunk["data"]
+        
+        if audio_data:
+            _session_tokens["tts_calls"] += 1
+            return audio_data
+        return None
     except Exception as e:
-        log.error(f"TTS error: {e}")
+        log.error(f"TTS error (Edge): {e}")
         return None
 
 
@@ -1230,7 +1269,7 @@ async def generate_response(
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=formatted_messages,
             config={
                 "system_instruction": system,
@@ -1257,7 +1296,7 @@ async def generate_response(
 
 # Shared state
 task_manager = AiderTaskManager(max_concurrent=3)
-llm_client: Optional[genai.Client] = None
+llm_client: Optional[OpenAIGenAIWrapper] = None
 cached_projects: list[dict] = []
 recently_built: list[dict] = []  # [{"name": str, "path": str, "time": float}]
 dispatch_registry = DispatchRegistry()
@@ -1442,7 +1481,7 @@ async def lifespan(application: FastAPI):
     global llm_client, cached_projects
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
     if GEMINI_API_KEY and GEMINI_API_KEY != "your-gemini-api-key-here":
-        llm_client = genai.Client(api_key=GEMINI_API_KEY)
+        llm_client = OpenAIGenAIWrapper(openai_key=OPENAI_API_KEY, gemini_key=GEMINI_API_KEY)
     else:
         log.warning("GEMINI_API_KEY not set — LLM features disabled")
     cached_projects = []
@@ -1965,9 +2004,9 @@ Write an updated summary in 2-4 sentences capturing the key topics, decisions, a
         response = await client.aio.models.generate_content(
             model="gemini-2.5-flash",
             contents=prompt,
-            config=genai.types.GenerateContentConfig(
-                max_output_tokens=200,
-            )
+            config={
+                "max_output_tokens": 200,
+            }
         )
         return response.text.strip()
     except Exception as e:
@@ -2323,6 +2362,8 @@ async def voice_handler(ws: WebSocket):
                                     asyncio.create_task(
                                         _execute_prompt_project(name, target, work_session, ws, dispatch_id=did, history=history, voice_state=voice_state)
                                     )
+                                elif embedded_action["action"] == "open":
+                                    asyncio.create_task(_execute_open_path(embedded_action["target"]))
                                 elif embedded_action["action"] == "browse":
                                     asyncio.create_task(_execute_browse(embedded_action["target"]))
                                 elif embedded_action["action"] == "research":
@@ -2546,7 +2587,8 @@ async def api_test_gemini(body: KeyTest):
     if not key:
         return {"valid": False, "error": "No key provided"}
     try:
-        client = genai.Client(api_key=key)
+        # Test as Gemini key primarily
+        client = OpenAIGenAIWrapper(openai_key=None, gemini_key=key)
         await client.aio.models.generate_content(model="gemini-2.5-flash", contents="Hi")
         return {"valid": True}
     except Exception as e:

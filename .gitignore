@@ -6,6 +6,7 @@
 node_modules/
 .venv/
 venv/
+jarvis_env/
 
 # Python
 __pycache__/

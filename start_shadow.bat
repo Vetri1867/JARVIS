@@ -1,7 +1,7 @@
 @echo off
 echo Starting SHADOW Backend...
 cd /d "D:\jarvis\jarvis-main"
-start "SHADOW Backend" cmd /k "python server.py"
+start "SHADOW Backend" cmd /k ".\jarvis_env\Scripts\python.exe server.py"
 
 echo Starting SHADOW Frontend...
 cd frontend

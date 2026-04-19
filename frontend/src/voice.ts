@@ -43,54 +43,68 @@ export function createVoiceInput(
 
   recognition.onresult = (event: any) => {
     for (let i = event.resultIndex; i < event.results.length; i++) {
-      if (event.results[i].isFinal) {
-        let text = event.results[i][0].transcript.trim();
-        if (text) {
-          console.log("[HEARD]:", text);
-          
-          let lowerText = text.toLowerCase().replace(/[.,!?]/g, "");
-          let triggered = false;
-          let command = "";
+      const result = event.results[i];
+      const text = result[0].transcript.trim();
+      const lowerText = text.toLowerCase().replace(/[.,!?]/g, "");
 
-          if (!isAwake) {
-            const parts = lowerText.split(/\s+/);
-            const wwIndex = parts.findIndex((p: string) => WAKE_WORDS.includes(p));
-            if (wwIndex !== -1) {
-                triggered = true;
-                const wwUsed = parts[wwIndex];
-                const regex = new RegExp(`\\b${wwUsed}\\b`, 'i');
-                const match = text.match(regex);
-                if (match) {
-                    command = text.substring(match.index! + match[0].length).trim();
-                }
+      if (!result.isFinal) {
+        // Fast Wake Word Detection on interim results
+        if (!isAwake) {
+          const parts = lowerText.split(/\s+/);
+          if (parts.some((p: string) => WAKE_WORDS.includes(p))) {
+            isAwake = true;
+            console.log("[SHADOW] woke up (interim)!");
+            if (onWake) onWake();
+            if (awakeTimeout) clearTimeout(awakeTimeout);
+          }
+        }
+        continue;
+      }
+
+      if (text) {
+        console.log("[HEARD]:", text);
+        
+        let triggered = false;
+        let command = "";
+
+        // Check if this final result contains the wake word (if not already awake)
+        if (!isAwake) {
+          const parts = lowerText.split(/\s+/);
+          const wwIndex = parts.findIndex((p: string) => WAKE_WORDS.includes(p));
+          if (wwIndex !== -1) {
+            triggered = true;
+            const wwUsed = parts[wwIndex];
+            const regex = new RegExp(`\\b${wwUsed}\\b`, 'i');
+            const match = text.match(regex);
+            if (match) {
+              command = text.substring(match.index! + match[0].length).trim();
             }
           }
+        }
 
-          if (triggered || isAwake) {
-            if (!isAwake) {
-              isAwake = true;
-              console.log("[SHADOW] woke up!");
-              if (onWake) onWake();
-            }
-            
-            if (awakeTimeout) clearTimeout(awakeTimeout);
-            
-            let textToSend = triggered ? command : text;
-            textToSend = textToSend.replace(/^[.,!?]\s*/, "").trim();
+        if (triggered || isAwake) {
+          if (!isAwake) {
+            isAwake = true;
+            console.log("[SHADOW] woke up!");
+            if (onWake) onWake();
+          }
+          
+          if (awakeTimeout) clearTimeout(awakeTimeout);
+          
+          let textToSend = triggered ? command : text;
+          textToSend = textToSend.replace(/^[.,!?]\s*/, "").trim();
 
-            if (textToSend) {
-               // We got a command, go to sleep and process it
-               isAwake = false;
-               if (onSleep) onSleep();
-               onTranscript(textToSend);
-            } else {
-               // Just woke up, waiting for command
-               awakeTimeout = setTimeout(() => {
-                 isAwake = false;
-                 if (onSleep) onSleep();
-                 console.log("[SHADOW] went to sleep due to inactivity.");
-               }, 10000);
-            }
+          if (textToSend) {
+            isAwake = false;
+            if (onSleep) onSleep();
+            onTranscript(textToSend);
+          } else {
+            // Just woke up, waiting for command
+            awakeTimeout = setTimeout(() => {
+              isAwake = false;
+              if (onSleep) onSleep();
+              console.log("[SHADOW] went to sleep due to inactivity.");
+            }, 10000);
           }
         }
       }
@@ -108,44 +122,55 @@ export function createVoiceInput(
   };
 
   recognition.onerror = (event: any) => {
+    console.error("[voice] recognition error:", event.error, event.message);
     if (event.error === "not-allowed") {
-      onError("Microphone access denied. Please allow microphone access.");
+      onError("Microphone access denied. Please check site permissions.");
       shouldListen = false;
+    } else if (event.error === "network") {
+      onError("Speech recognition network error. check connection.");
     } else if (event.error === "no-speech") {
-      // Normal, just restart
+      // Normal, just restart in onend
     } else if (event.error === "aborted") {
       // Expected during pause
     } else {
-      console.warn("[voice] recognition error:", event.error);
+      console.warn("[voice] unexpected recognition error:", event.error);
     }
+  };
+
+  recognition.onstart = () => {
+    console.log("[voice] recognition started");
   };
 
   return {
     start() {
+      console.log("[voice] starting recognition...");
       shouldListen = true;
       paused = false;
       try {
         recognition.start();
-      } catch {
-        // Already started
+      } catch (e) {
+        console.warn("[voice] start failed (likely already running):", e);
       }
     },
     stop() {
+      console.log("[voice] stopping recognition...");
       shouldListen = false;
       paused = false;
       recognition.stop();
     },
     pause() {
+      console.log("[voice] pausing recognition...");
       paused = true;
       recognition.stop();
     },
     resume() {
+      console.log("[voice] resuming recognition...");
       paused = false;
       if (shouldListen) {
         try {
           recognition.start();
-        } catch {
-          // Already started
+        } catch (e) {
+          console.warn("[voice] resume failed:", e);
         }
       }
     },

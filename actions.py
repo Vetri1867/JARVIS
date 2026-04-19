@@ -143,6 +143,39 @@ async def open_chrome(url: str) -> dict:
     return await open_browser(url, "chrome")
 
 
+async def open_path(path: str) -> dict:
+    """Open a file or folder on the system."""
+    try:
+        # Resolve path
+        p = Path(path).expanduser()
+        
+        # If not absolute, try relative to home or Desktop
+        if not p.is_absolute():
+            # Check desktop first
+            desktop_p = DESKTOP_PATH / path
+            if desktop_p.exists():
+                p = desktop_p
+            else:
+                # Check home
+                home_p = Path.home() / path
+                if home_p.exists():
+                    p = home_p
+
+        if not p.exists():
+             return {"success": False, "confirmation": f"I couldn't find {path}, sir."}
+        
+        log.info(f"Opening path: {p}")
+        if IS_WINDOWS:
+            os.startfile(str(p))
+        else:
+            subprocess.run(["open", str(p)])
+            
+        return {"success": True, "confirmation": f"Opened {p.name} for you, sir."}
+    except Exception as e:
+        log.error(f"open_path failed: {e}")
+        return {"success": False, "confirmation": f"Had trouble opening that, sir."}
+
+
 async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
     """Open a terminal, cd to project dir, run Aider interactively.
 
