@@ -164,13 +164,14 @@ html, body {
 
 #copyright-info {
   position: fixed;
-  bottom: 8px;
-  right: 16px;
-  color: rgba(0, 212, 255, 0.15);
-  font-size: 9px;
+  bottom: 12px;
+  right: 20px;
+  color: rgba(0, 212, 255, 0.4);
+  font-size: 10px;
   letter-spacing: 1px;
   pointer-events: none;
   z-index: 10;
+  font-family: 'Courier New', Courier, monospace;
 }
 
 #controls {

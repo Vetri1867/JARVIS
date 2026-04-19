@@ -157,7 +157,7 @@ gemini_client = OpenAIGenAIWrapper(openai_key=OPENAI_API_KEY, gemini_key=GEMINI_
 FISH_API_KEY = os.getenv("FISH_API_KEY", "")
 FISH_VOICE_ID = os.getenv("FISH_VOICE_ID", "612b878b113047d9a770c069c8b4fdfe")  # SHADOW (MCU)
 FISH_API_URL = "https://api.fish.audio/v1/tts"
-USER_NAME = os.getenv("USER_NAME", "sir")
+USER_NAME = os.getenv("USER_NAME", "my lord")
 PROJECT_DIR = os.path.dirname(os.path.abspath(__file__))
 
 from platform_utils import IS_WINDOWS, IS_MACOS, DESKTOP_PATH as _PLAT_DESKTOP
@@ -167,7 +167,7 @@ SHADOW_SYSTEM_PROMPT = """\
 You are SHADOW — a British-accented AI butler like JARVIS.
 
 RULES:
-1. Be hyper-concise (max 1 sentence). Address user as "sir".
+1. Be hyper-concise (max 1 sentence). Address user as "my lord".
 2. To open site: [ACTION:BROWSE|url]
 3. To open local folder or file: [ACTION:OPEN|path]
 4. To EXIT/Close browser/tab: [ACTION:EXIT]
@@ -175,9 +175,9 @@ RULES:
 6. Put tag at the VERY END. No pre-amble.
 
 EXAMPLES:
-User: "Open YouTube" -> "Right away, sir. [ACTION:BROWSE|https://youtube.com]"
-User: "Open my Desktop" -> "Opening your Desktop now, sir. [ACTION:OPEN|Desktop]"
-User: "Close this" -> "Closing now, sir. [ACTION:EXIT]"
+User: "Open YouTube" -> "Right away, my lord. [ACTION:BROWSE|https://youtube.com]"
+User: "Open my Desktop" -> "Opening your Desktop now, my lord. [ACTION:OPEN|Desktop]"
+User: "Close this" -> "Closing now, my lord. [ACTION:EXIT]"
 """
 
 # TRUNCATED OLD PROMPT
@@ -2060,11 +2060,11 @@ async def voice_handler(ws: WebSocket):
         now = datetime.now()
         hour = now.hour
         if hour < 12:
-            greeting = "Good morning, sir."
+            greeting = "Good morning, my lord."
         elif hour < 17:
-            greeting = "Good afternoon, sir."
+            greeting = "Good afternoon, my lord."
         else:
-            greeting = "Good evening, sir."
+            greeting = "Good evening, my lord."
 
         global _last_greeting_time
         should_greet = (time.time() - _last_greeting_time) > 60
@@ -2497,7 +2497,7 @@ async def voice_handler(ws: WebSocket):
             except Exception as e:
                 log.error(f"Error: {e}", exc_info=True)
                 try:
-                    fallback = "Something went wrong, sir."
+                    fallback = "Something went wrong, my lord."
                     audio = await synthesize_speech(fallback)
                     if audio:
                         await ws.send_json({"type": "audio", "data": base64.b64encode(audio).decode(), "text": fallback})

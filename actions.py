@@ -21,6 +21,7 @@ from urllib.parse import quote
 from platform_utils import IS_WINDOWS, IS_MACOS, DESKTOP_PATH
 
 log = logging.getLogger("shadow.actions")
+PROJECT_DIR = Path(__file__).parent.resolve()
 
 
 # ---------------------------------------------------------------------------
@@ -188,8 +189,11 @@ async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
 
     if IS_WINDOWS:
         try:
-            # Launch aider interactive in a new cmd window
-            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-1.5-flash --message-file AIDER.md"'
+            # Use the aider executable from our virtual environment if it exists
+            aider_exe = PROJECT_DIR / "jarvis_env" / "Scripts" / "aider.exe"
+            aider_cmd = f'"{aider_exe}"' if aider_exe.exists() else "aider"
+            
+            cmd = f'start cmd /k "cd /d {project_dir} && {aider_cmd} --model gemini/gemini-1.5-flash --message-file AIDER.md"'
             subprocess.Popen(cmd, shell=True)
             return {
                 "success": True,
@@ -254,14 +258,11 @@ async def prompt_existing_terminal(project_name: str, prompt: str) -> dict:
 
             # Spawn aider in the project directory with the prompt
             import shutil
-            aider_path = shutil.which("aider")
-            if not aider_path:
-                return {
-                    "success": False,
-                    "confirmation": "Aider CLI not found on this system, sir.",
-                }
+            # Use venv aider
+            aider_exe = PROJECT_DIR / "jarvis_env" / "Scripts" / "aider.exe"
+            aider_cmd = f'"{aider_exe}"' if aider_exe.exists() else "aider"
 
-            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-1.5-flash --message \\"{prompt[:100]}\\""'
+            cmd = f'start cmd /k "cd /d {project_dir} && {aider_cmd} --model gemini/gemini-1.5-flash --message \\"{prompt[:100]}\\""'
             subprocess.Popen(cmd, shell=True)
 
             return {
