@@ -127,7 +127,17 @@ export function createVoiceInput(
       onError("Microphone access denied. Please check site permissions.");
       shouldListen = false;
     } else if (event.error === "network") {
-      onError("Speech recognition network error. check connection.");
+      onError("Speech recognition network error. retrying in 3s...");
+      // Auto-retry network errors after a delay
+      if (shouldListen && !paused) {
+        setTimeout(() => {
+          try {
+            recognition.start();
+          } catch {
+            // Already started or busy
+          }
+        }, 3000);
+      }
     } else if (event.error === "no-speech") {
       // Normal, just restart in onend
     } else if (event.error === "aborted") {

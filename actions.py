@@ -189,7 +189,7 @@ async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
     if IS_WINDOWS:
         try:
             # Launch aider interactive in a new cmd window
-            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-2.5-flash --message-file AIDER.md"'
+            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-1.5-flash --message-file AIDER.md"'
             subprocess.Popen(cmd, shell=True)
             return {
                 "success": True,
@@ -206,7 +206,7 @@ async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
         script = (
             'tell application "Terminal"\n'
             "    activate\n"
-            f'    do script "cd {project_dir} && aider --model gemini/gemini-2.5-flash --message-file AIDER.md"\n'
+            f'    do script "cd {project_dir} && aider --model gemini/gemini-1.5-flash --message-file AIDER.md"\n'
             "end tell"
         )
         proc = await asyncio.create_subprocess_exec(
@@ -261,7 +261,7 @@ async def prompt_existing_terminal(project_name: str, prompt: str) -> dict:
                     "confirmation": "Aider CLI not found on this system, sir.",
                 }
 
-            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-2.5-flash --message \\"{prompt[:100]}\\""'
+            cmd = f'start cmd /k "cd /d {project_dir} && aider --model gemini/gemini-1.5-flash --message \\"{prompt[:100]}\\""'
             subprocess.Popen(cmd, shell=True)
 
             return {

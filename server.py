@@ -2003,7 +2003,7 @@ Write an updated summary in 2-4 sentences capturing the key topics, decisions, a
 
     try:
         response = await client.aio.models.generate_content(
-            model="gemini-2.5-flash",
+            model="gemini-1.5-flash",
             contents=prompt,
             config={
                 "max_output_tokens": 200,
@@ -2108,7 +2108,8 @@ async def voice_handler(ws: WebSocket):
                 await ws.send_json({"type": "status", "state": "speaking"})
                 audio = await synthesize_speech(tts)
                 if audio:
-                    await ws.send_json({"type": "audio", "data": audio, "text": response_text})
+                    encoded = base64.b64encode(audio).decode()
+                    await ws.send_json({"type": "audio", "data": encoded, "text": response_text})
                 else:
                     await ws.send_json({"type": "text", "text": response_text})
                 continue
@@ -2245,7 +2246,7 @@ async def voice_handler(ws: WebSocket):
                         if full_response and llm_client:
                             try:
                                 summary = await llm_client.aio.models.generate_content(
-                                    model="gemini-2.5-flash",
+                                    model="gemini-1.5-flash",
                                     contents=f"Aider said:\n{full_response[:2000]}",
                                     config={
                                         "system_instruction": (
@@ -2590,7 +2591,7 @@ async def api_test_gemini(body: KeyTest):
     try:
         # Test as Gemini key primarily
         client = OpenAIGenAIWrapper(openai_key=None, gemini_key=key)
-        await client.aio.models.generate_content(model="gemini-2.5-flash", contents="Hi")
+        await client.aio.models.generate_content(model="gemini-1.5-flash", contents="Hi")
         return {"valid": True}
     except Exception as e:
         return {"valid": False, "error": str(e)[:200]}
