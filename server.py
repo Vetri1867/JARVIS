@@ -843,6 +843,7 @@ def extract_action(response: str) -> tuple[str, dict | None]:
 
     Returns (clean_text_for_tts, action_dict_or_none).
     """
+    match = _action_re.search(
         r'\[ACTION:(BUILD|BROWSE|RESEARCH|OPEN_TERMINAL|PROMPT_PROJECT|ADD_TASK|ADD_NOTE|COMPLETE_TASK|REMEMBER|CREATE_NOTE|READ_NOTE|SCREEN|OPEN|EXIT)(?:\||\s+)(.*?)\]',
         response, _action_re.DOTALL | _action_re.IGNORECASE,
     )
