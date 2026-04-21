@@ -2,7 +2,7 @@
 
 **Just A Rather Very Intelligent System.**
 
-A voice-first AI assistant that runs on your Mac. Talk to it, and it talks back -- with a British accent, dry wit, and an audio-reactive particle orb straight out of the MCU.
+A voice-first AI assistant that runs on your windows. Talk to it, and it talks back -- with a British accent, dry wit, and an audio-reactive particle orb straight out of the MCU.
 
 SHADOW connects to your Apple Calendar, Mail, and Notes. It can browse the web, spawn Claude Code sessions to build entire projects, and plan your day -- all through natural voice conversation.
 
@@ -29,7 +29,7 @@ SHADOW connects to your Apple Calendar, Mail, and Notes. It can browse the web, 
 
 ## Requirements
 
-- **macOS** (uses AppleScript for Calendar, Mail, Notes integration)
+- **windows** (uses AppleScript for Calendar, Mail, Notes integration)
 - **Python 3.11+**
 - **Node.js 18+**
 - **Google Chrome** (required for Web Speech API)
