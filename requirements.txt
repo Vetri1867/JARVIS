@@ -10,4 +10,11 @@ pyyaml>=6.0
 mss>=9.0.0
 psutil>=5.9.0
 openai>=1.14.0
-aider-chat>=0.86.2
+# Optional (not required for voice assistant). Keep commented to avoid OpenAI version conflicts.
+# aider-chat
+livekit>=0.11.0
+livekit-agents>=0.8.0
+livekit-plugins-openai>=0.7.0
+livekit-plugins-silero>=0.6.0
+livekit-plugins-google>=0.5.0
+livekit-api>=0.8.0

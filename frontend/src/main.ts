@@ -1,12 +1,12 @@
 /**
- * SHADOW — Main entry point.
+ * SHADOW — Main entry point (LiveKit Edition).
  *
- * Wires together the orb visualization, WebSocket communication,
- * speech recognition, and audio playback into a single experience.
+ * Wires together the orb visualization, LiveKit communication,
+ * and UI controls into a single experience.
  */
 
 import { createOrb, type OrbState } from "./orb";
-import { createVoiceInput, createAudioPlayer } from "./voice";
+import { createWebVoice } from "./voice";
 import { createSocket } from "./ws";
 import { openSettings, checkFirstTimeSetup } from "./settings";
 import "./style.css";
@@ -17,13 +17,13 @@ import "./style.css";
 
 type State = "idle" | "listening" | "thinking" | "speaking";
 let currentState: State = "idle";
-let isMuted = false;
+let isMuted = true; // start with mic OFF to avoid "press screen" requirement
 
 const statusEl = document.getElementById("status-text")!;
 const errorEl = document.getElementById("error-text")!;
 const memoryFeed = document.getElementById("memory-feed")!;
 const tasksFeed = document.getElementById("tasks-feed")!;
-const calendarFeed = document.getElementById("calendar-feed")!;
+const netStatusEl = document.getElementById("net-status");
 
 function updateFeed(el: HTMLElement, text: string) {
   const div = document.createElement("div");
@@ -69,138 +69,91 @@ function updateStatus(state: State) {
 const canvas = document.getElementById("orb-canvas") as HTMLCanvasElement;
 const orb = createOrb(canvas);
 
+// Still need the socket for task notifications and stats
 const wsProto = window.location.protocol === "https:" ? "wss:" : "ws:";
-const WS_URL = `${wsProto}//${window.location.host}/ws/voice`;
+// Use backend port directly (works even without Vite proxy)
+const WS_URL = `${wsProto}//localhost:8340/ws/voice`;
 const socket = createSocket(WS_URL);
 
-const audioPlayer = createAudioPlayer();
-orb.setAnalyser(audioPlayer.getAnalyser());
+const voice = createWebVoice();
 
 function transition(newState: State) {
   if (newState === currentState) return;
   currentState = newState;
   orb.setState(newState as OrbState);
   updateStatus(newState);
-
-  switch (newState) {
-    case "idle":
-      if (!isMuted) voiceInput.resume();
-      break;
-    case "listening":
-      if (!isMuted) voiceInput.resume();
-      break;
-    case "thinking":
-      voiceInput.pause();
-      break;
-    case "speaking":
-      voiceInput.pause();
-      break;
-  }
 }
 
 // ---------------------------------------------------------------------------
-// Voice input
+// LiveKit Event Handlers
 // ---------------------------------------------------------------------------
 
-const voiceInput = createVoiceInput(
-  (text: string) => {
-    // Cancel any current SHADOW response before sending new input
-    audioPlayer.stop();
-    // User spoke — send transcript
-    socket.send({ type: "transcript", text, isFinal: true });
-    transition("thinking");
-  },
-  (msg: string) => {
-    showError(msg);
-  },
-  () => {
-    transition("listening");
-  },
-  () => {
-    transition("idle");
-  }
-);
-
-// ---------------------------------------------------------------------------
-// Audio playback finished
-// ---------------------------------------------------------------------------
-
-audioPlayer.onFinished(() => {
-  transition("idle");
+voice.onTranscript((text) => {
+  updateFeed(memoryFeed, text);
 });
 
-// ---------------------------------------------------------------------------
-// WebSocket messages
-// ---------------------------------------------------------------------------
-
-socket.onMessage((msg) => {
-  const type = msg.type as string;
-
-  if (type === "audio") {
-    const audioData = msg.data as string;
-    console.log("[audio] received", audioData ? `${audioData.length} chars` : "EMPTY", "state:", currentState);
-    if (audioData) {
-      if (currentState !== "speaking") {
-        transition("speaking");
-      }
-      audioPlayer.enqueue(audioData);
-    } else {
-      // TTS failed — no audio but still need to return to idle
-      console.warn("[audio] no data received, returning to idle");
-      transition("idle");
-    }
-    // Log text for debugging
-    if (msg.text) {
-      console.log("[SHADOW]", msg.text);
-      updateFeed(memoryFeed, msg.text as string);
-    }
-  } else if (type === "status") {
-    const state = msg.state as string;
-    if (state === "thinking" && currentState !== "thinking") {
-      transition("thinking");
-    } else if (state === "working") {
-      // Task spawned — show thinking with a different label
-      transition("thinking");
-      statusEl.textContent = "working...";
-    } else if (state === "idle") {
-      transition("idle");
-    }
-  } else if (type === "text") {
-    // Text fallback when TTS fails
-    console.log("[SHADOW]", msg.text);
-    updateFeed(memoryFeed, msg.text as string);
-  } else if (type === "task_spawned") {
-    console.log("[task]", "spawned:", msg.task_id, msg.prompt);
-    updateFeed(tasksFeed, `NEW: ${msg.prompt}`);
-  } else if (type === "task_complete") {
-    console.log("[task]", "complete:", msg.task_id, msg.status, msg.summary);
-    updateFeed(tasksFeed, `DONE: ${msg.summary}`);
-  }
+voice.onStateChange((state) => {
+  transition(state);
 });
+
+// Periodic check to attach analyser once track is active
+const analyserInterval = setInterval(() => {
+  const node = voice.getAnalyser();
+  if (node) {
+    orb.setAnalyser(node);
+    clearInterval(analyserInterval);
+    console.log("[main] orb linked to livekit analyser");
+
+    // MIC level indicator (proves audio is reaching SHADOW even if STT fails)
+    if (netStatusEl) {
+      const buf = new Uint8Array(node.fftSize);
+      setInterval(() => {
+        try {
+          node.getByteTimeDomainData(buf);
+          // RMS in [0..~1]
+          let sum = 0;
+          for (let i = 0; i < buf.length; i++) {
+            const v = (buf[i] - 128) / 128;
+            sum += v * v;
+          }
+          const rms = Math.sqrt(sum / buf.length);
+          // Lower threshold to detect quiet microphones.
+          if (rms > 0.006) {
+            netStatusEl.textContent = "MIC_ON";
+            netStatusEl.classList.add("status-online");
+          } else {
+            netStatusEl.textContent = "MIC_IDLE";
+          }
+        } catch {
+          // ignore
+        }
+      }, 300);
+    }
+  }
+}, 500);
 
 // ---------------------------------------------------------------------------
 // Kick off
 // ---------------------------------------------------------------------------
 
-// Start listening after a brief delay for the orb to render
-setTimeout(() => {
-  voiceInput.start();
-  transition("idle");
-}, 1000);
-
-// Resume AudioContext on ANY user interaction (browser autoplay policy)
-function ensureAudioContext() {
-  const ctx = audioPlayer.getAnalyser().context as AudioContext;
-  if (ctx.state === "suspended") {
-    ctx.resume().then(() => console.log("[audio] context resumed"));
+async function startAssistant() {
+  try {
+    await voice.connect("", "");
+    transition("idle");
+    if (netStatusEl) {
+      netStatusEl.textContent = "ONLINE";
+      netStatusEl.classList.add("status-online");
+    }
+  } catch (err: any) {
+    console.error("[assistant] failed to start:", err);
+    showError(`Voice init failed: ${err?.message || err}. Click the page and allow microphone.`);
+    if (netStatusEl) netStatusEl.textContent = "ERROR";
   }
 }
-document.addEventListener("click", ensureAudioContext);
-document.addEventListener("touchstart", ensureAudioContext);
-document.addEventListener("keydown", ensureAudioContext, { once: true });
 
-// Try to resume audio context on load
-ensureAudioContext();
+// Start backend connection immediately. Mic is enabled via the mic button.
+startAssistant();
+statusEl.textContent = "click mic to enable voice...";
 
 // ---------------------------------------------------------------------------
 // UI Controls
@@ -212,18 +165,20 @@ const menuDropdown = document.getElementById("menu-dropdown")!;
 const btnRestart = document.getElementById("btn-restart")!;
 const btnFixSelf = document.getElementById("btn-fix-self")!;
 
-btnMute.addEventListener("click", (e) => {
+btnMute.addEventListener("click", async (e) => {
   e.stopPropagation();
   isMuted = !isMuted;
   btnMute.classList.toggle("muted", isMuted);
+  await voice.setMute(isMuted);
   if (isMuted) {
-    voiceInput.pause();
     transition("idle");
   } else {
-    voiceInput.resume();
-    transition("listening");
+    transition("idle");
   }
 });
+
+// Ensure initial UI reflects muted state
+btnMute.classList.toggle("muted", isMuted);
 
 btnMenu.addEventListener("click", (e) => {
   e.stopPropagation();
@@ -240,7 +195,6 @@ btnRestart.addEventListener("click", async (e) => {
   statusEl.textContent = "restarting...";
   try {
     await fetch("/api/restart", { method: "POST" });
-    // Wait a few seconds then reload
     setTimeout(() => window.location.reload(), 4000);
   } catch {
     statusEl.textContent = "restart failed";
@@ -250,9 +204,22 @@ btnRestart.addEventListener("click", async (e) => {
 btnFixSelf.addEventListener("click", (e) => {
   e.stopPropagation();
   menuDropdown.style.display = "none";
-  // Activate work mode on the WebSocket session (SHADOW becomes Claude Code's voice)
   socket.send({ type: "fix_self" });
   statusEl.textContent = "entering work mode...";
+});
+
+// Self-repair responses from backend
+socket.onMessage((msg) => {
+  const type = String((msg as any)?.type || "");
+  if (type === "text") {
+    updateFeed(tasksFeed, String((msg as any)?.text || ""));
+  }
+  if (type === "status") {
+    const state = String((msg as any)?.state || "");
+    if (state === "idle" || state === "listening" || state === "thinking" || state === "speaking") {
+      transition(state as any);
+    }
+  }
 });
 
 // Settings button
@@ -271,13 +238,8 @@ function handleChatSubmit() {
   const text = chatInput.value.trim();
   if (!text) return;
   
-  // Cancel any current SHADOW response
-  audioPlayer.stop();
+  voice.sendData({ type: "transcript", text, isFinal: true });
   
-  // Send to backend
-  socket.send({ type: "transcript", text, isFinal: true });
-  
-  // Clear input and update UI state
   chatInput.value = "";
   transition("thinking");
 }
@@ -290,7 +252,7 @@ chatInput.addEventListener("keydown", (e) => {
   }
 });
 
-// First-time setup detection — check after a short delay for server readiness
+// First-time setup detection
 setTimeout(() => {
   checkFirstTimeSetup();
 }, 2000);

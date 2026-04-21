@@ -1,11 +1,24 @@
 @echo off
-echo Starting SHADOW Backend...
+setlocal
+
+echo ===================================================
+echo   SHADOW - Desktop Assistant (Local)
+echo ===================================================
+
 cd /d "D:\jarvis\jarvis-main"
-start "SHADOW Backend" cmd /k ".\jarvis_env\Scripts\python.exe server.py"
 
-echo Starting SHADOW Frontend...
+echo [1/2] Starting SHADOW Backend (FastAPI) on port 8340...
+start "SHADOW Backend" cmd /k "python server.py"
+
+echo [2/2] Starting SHADOW Frontend (Vite) on port 5173...
 cd frontend
-start "SHADOW Frontend" cmd /c "npm run dev"
+start "SHADOW Frontend" cmd /k "npm run dev"
 
-echo SHADOW is starting up! You can close this small window.
+echo.
+echo ===================================================
+echo   SHADOW is initializing...
+echo   Open Chrome and go to: http://localhost:5173
+echo ===================================================
+
 timeout /t 3 >nul
+exit

@@ -3,74 +3,108 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>SHADOW</title>
+    <title>SHADOW | Systemic Highly Advanced Digital Operational Warden</title>
+    <!-- Google Fonts for premium typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@200;400;600&family=JetBrains+Mono:wght@300;500&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
-    <div id="hud-overlay">
-      <div class="hud-ring ring-outer"></div>
-      <div class="hud-ring ring-middle"></div>
-      <div class="hud-ring ring-inner"></div>
-      
-      <div id="hud-left" class="hud-panel">
-        <div class="panel-header">SYSTEM_CORE</div>
-        <div id="system-stats">
-          <div class="stat-row">CPU: <span id="cpu-load">00%</span></div>
-          <div class="stat-row">MEM: <span id="mem-usage">00%</span></div>
-          <div class="stat-row">NET: <span id="net-status">ONLINE</span></div>
-        </div>
-        <div class="panel-header" style="margin-top: 20px;">MEMORY_LOG</div>
-        <div id="memory-feed"></div>
-      </div>
-
-      <div id="hud-right" class="hud-panel">
-        <div class="panel-header">ACTIVE_TASKS</div>
-        <div id="tasks-feed"></div>
-        <div class="panel-header" style="margin-top: 20px;">CALENDAR</div>
-        <div id="calendar-feed"></div>
-      </div>
-    </div>
-
+    <!-- The visual core: Three.js Orb -->
     <canvas id="orb-canvas"></canvas>
 
-    <!-- Minimal controls — top right -->
-    <div id="controls">
-      <button id="btn-mute" title="Mute/Unmute">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-          <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-          <line x1="12" y1="19" x2="12" y2="23"/>
-        </svg>
-      </button>
-      <button id="btn-menu" title="Menu">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-          <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
-        </svg>
-      </button>
+    <!-- JARVIS-grade HUD Overlay -->
+    <div id="hud-overlay">
+      <!-- Concentric Reactive Rings -->
+      <div class="hud-rings">
+        <div class="hud-ring ring-outer"></div>
+        <div class="hud-ring ring-middle"></div>
+        <div class="hud-ring ring-inner"></div>
+        <div class="hud-ring-glitch"></div>
+      </div>
+      
+      <!-- Floating Information Panels -->
+      <aside id="hud-left" class="hud-panel glassmorphism">
+        <header class="panel-header">
+          <span class="glitch-text" data-text="SYSTEM_CORE">SYSTEM_CORE</span>
+        </header>
+        <div id="system-stats">
+          <div class="stat-row">
+            <span class="label">CPU_LOAD:</span>
+            <span id="cpu-load" class="value">0.00%</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">MEM_USE:</span>
+            <span id="mem-usage" class="value">0.00%</span>
+          </div>
+          <div class="stat-row">
+            <span class="label">LINK_STAT:</span>
+            <span id="net-status" class="value status-online">SECURE</span>
+          </div>
+        </div>
+        <div class="separator"></div>
+        <header class="panel-header">MEMORY_LOG</header>
+        <div id="memory-feed" class="scroll-feed"></div>
+      </aside>
+
+      <aside id="hud-right" class="hud-panel glassmorphism">
+        <header class="panel-header">ACTIVE_TASKS</header>
+        <div id="tasks-feed" class="scroll-feed"></div>
+        <div class="separator"></div>
+        <header class="panel-header">CALENDAR_SYNC</header>
+        <div id="calendar-feed" class="scroll-feed"></div>
+      </aside>
     </div>
 
-    <!-- Dropdown menu -->
-    <div id="menu-dropdown" style="display:none">
-      <button id="btn-settings">Settings</button>
-      <button id="btn-restart">Restart Server</button>
-      <button id="btn-fix-self">Fix Yourself</button>
-    </div>
+    <!-- Interactive Layer -->
+    <main id="ui-layer">
+      <div id="status-container">
+        <div id="status-text">initializing systemic link...</div>
+        <div id="shadow-label">W.A.R.D.E.N. CORE v1.5.5</div>
+      </div>
 
-    <div id="status-text"></div>
-    <div id="shadow-label">SHADOW</div>
-    <div id="copyright-info">© 2024 VETRI VENDHAN M | +91 6374746106</div>
-    <div id="error-text"></div>
+      <!-- Chat Interface -->
+      <section id="chat-container">
+        <div class="chat-glass">
+          <input type="text" id="chat-input" placeholder="Initiate verbal/textual command..." autocomplete="off" />
+          <button id="btn-send-chat" aria-label="Send Command">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2L15 22L11 13L2 9L22 2z"/>
+            </svg>
+          </button>
+        </div>
+      </section>
 
-    <!-- Chat Input -->
-    <div id="chat-container">
-      <input type="text" id="chat-input" placeholder="Message SHADOW..." autocomplete="off" />
-      <button id="btn-send-chat" title="Send">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-          <line x1="22" y1="2" x2="11" y2="13"></line>
-          <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-        </svg>
-      </button>
-    </div>
+      <!-- System Controls -->
+      <nav id="controls">
+        <button id="btn-mute" class="control-btn" title="Toggle Audio Input">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+            <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            <line x1="12" y1="19" x2="12" y2="23"/>
+          </svg>
+        </button>
+        <button id="btn-menu" class="control-btn" title="Core Settings">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/>
+          </svg>
+        </button>
+      </nav>
+
+      <!-- Menu Dropdown (Glassmorphism) -->
+      <div id="menu-dropdown" class="glassmorphism" style="display:none">
+        <button id="btn-settings">Preferences</button>
+        <button id="btn-restart">System Reset</button>
+        <button id="btn-fix-self">Diagnostic Self-Repair</button>
+      </div>
+
+      <div id="error-text"></div>
+    </main>
+
+    <footer id="branding">
+      <div id="copyright-info">© 2026 VETRI VENDHAN M | SHADOW_PROTOCOL</div>
+    </footer>
 
     <script type="module" src="/src/main.ts"></script>
   </body>

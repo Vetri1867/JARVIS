@@ -90,7 +90,9 @@ async def open_browser(url: str, browser: str = "chrome") -> dict:
     """Open URL in the user's browser."""
     if IS_WINDOWS:
         try:
-            webbrowser.open(url)
+            # webbrowser.open can be flaky on some Windows setups;
+            # cmd /c start reliably uses the default browser.
+            subprocess.Popen(['cmd', '/c', 'start', '', url], shell=False)
             return {
                 "success": True,
                 "confirmation": "Pulled that up in your browser, sir.",
@@ -148,17 +150,54 @@ async def open_path(path: str) -> dict:
     """Open a file or folder on the system."""
     try:
         # Resolve path
-        p = Path(path).expanduser()
+        raw = (path or "").strip().strip('"').strip("'")
+        low = raw.lower()
+
+        # Common Windows known folders
+        if IS_WINDOWS:
+            home = Path.home()
+            known: dict[str, Path] = {
+                "desktop": DESKTOP_PATH,
+                "downloads": Path(os.environ.get("USERPROFILE", str(home))) / "Downloads",
+                "documents": Path(os.environ.get("USERPROFILE", str(home))) / "Documents",
+                "pictures": Path(os.environ.get("USERPROFILE", str(home))) / "Pictures",
+                "music": Path(os.environ.get("USERPROFILE", str(home))) / "Music",
+                "videos": Path(os.environ.get("USERPROFILE", str(home))) / "Videos",
+            }
+            shell_known: dict[str, str] = {
+                "desktop": "shell:Desktop",
+                "downloads": "shell:Downloads",
+                "documents": "shell:Personal",
+                "pictures": "shell:My Pictures",
+                "music": "shell:My Music",
+                "videos": "shell:My Video",
+            }
+
+            # If user said a known folder name, prefer shell: which works with redirection/OneDrive
+            if low in shell_known:
+                try:
+                    subprocess.Popen(["explorer", shell_known[low]], shell=False)
+                    return {"success": True, "confirmation": f"Opened {low}, sir."}
+                except Exception:
+                    # fallback to physical path
+                    pass
+
+            if low in known and known[low].exists():
+                p = known[low]
+            else:
+                p = Path(raw).expanduser()
+        else:
+            p = Path(raw).expanduser()
         
-        # If not absolute, try relative to home or Desktop
+        # If not absolute, try relative to Desktop / home
         if not p.is_absolute():
             # Check desktop first
-            desktop_p = DESKTOP_PATH / path
+            desktop_p = DESKTOP_PATH / raw
             if desktop_p.exists():
                 p = desktop_p
             else:
                 # Check home
-                home_p = Path.home() / path
+                home_p = Path.home() / raw
                 if home_p.exists():
                     p = home_p
 
@@ -167,7 +206,8 @@ async def open_path(path: str) -> dict:
         
         log.info(f"Opening path: {p}")
         if IS_WINDOWS:
-            os.startfile(str(p))
+            # Explorer is more consistent for folders
+            subprocess.Popen(["explorer", str(p)], shell=False)
         else:
             subprocess.run(["open", str(p)])
             
@@ -175,6 +215,101 @@ async def open_path(path: str) -> dict:
     except Exception as e:
         log.error(f"open_path failed: {e}")
         return {"success": False, "confirmation": f"Had trouble opening that, sir."}
+
+
+def _iter_windows_shortcuts() -> list[Path]:
+    """Return likely Windows shortcut locations."""
+    if not IS_WINDOWS:
+        return []
+    home = Path.home()
+    candidates: list[Path] = [
+        DESKTOP_PATH,
+        home / "Desktop",
+        Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs",
+        Path(os.environ.get("PROGRAMDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs",
+    ]
+    out: list[Path] = []
+    for c in candidates:
+        if c and c.exists():
+            out.append(c)
+    return out
+
+
+async def open_app(app_name: str) -> dict:
+    """Open a Windows application by name.
+
+    Strategy:
+    - Match `.lnk` in Desktop + Start Menu programs
+    - Fallback to `start` on known executable names
+    """
+    name = (app_name or "").strip().strip('"').strip("'")
+    if not name:
+        return {"success": False, "confirmation": "Which application should I open, sir?"}
+
+    if not IS_WINDOWS:
+        return {"success": False, "confirmation": "App launching is only implemented on Windows right now, sir."}
+
+    norm = re.sub(r"\s+", " ", name).strip().lower()
+
+    # 1) Shortcut match
+    try:
+        matches: list[Path] = []
+        for root in _iter_windows_shortcuts():
+            for p in root.rglob("*.lnk"):
+                stem = p.stem.lower()
+                if norm == stem or norm in stem:
+                    matches.append(p)
+
+        if matches:
+            # Prefer closest match / shortest name
+            matches.sort(key=lambda p: (len(p.stem), p.stem.lower()))
+            target = matches[0]
+            os.startfile(str(target))
+            return {"success": True, "confirmation": f"Opened {target.stem}, sir."}
+    except Exception as e:
+        log.warning(f"shortcut scan failed: {e}")
+
+    # 2) Common app fallbacks
+    fallbacks: dict[str, list[str]] = {
+        "brave": [
+            "brave",
+            r"%ProgramFiles%\BraveSoftware\Brave-Browser\Application\brave.exe",
+            r"%LocalAppData%\BraveSoftware\Brave-Browser\Application\brave.exe",
+        ],
+        "chrome": [
+            "chrome",
+            r"%ProgramFiles%\Google\Chrome\Application\chrome.exe",
+            r"%LocalAppData%\Google\Chrome\Application\chrome.exe",
+        ],
+        "edge": ["msedge"],
+        "notepad": ["notepad"],
+        "calculator": ["calc"],
+    }
+
+    keys = [norm]
+    # handle "open brave browser"
+    if "brave" in norm:
+        keys.append("brave")
+    if "chrome" in norm:
+        keys.append("chrome")
+    if "edge" in norm:
+        keys.append("edge")
+
+    for k in keys:
+        if k in fallbacks:
+            for cmd in fallbacks[k]:
+                expanded = os.path.expandvars(cmd)
+                try:
+                    if expanded.lower().endswith(".exe") and Path(expanded).exists():
+                        subprocess.Popen([expanded], shell=False)
+                        return {"success": True, "confirmation": f"Opened {k}, sir."}
+                    # Use start for PATH-resolvable commands
+                    subprocess.Popen(["cmd", "/c", "start", "", expanded], shell=False)
+                    return {"success": True, "confirmation": f"Opened {k}, sir."}
+                except Exception:
+                    continue
+
+    return {"success": False, "confirmation": f"I couldn't find an app called {name}, sir."}
 
 
 async def open_aider_in_project(project_dir: str, prompt: str) -> dict:
